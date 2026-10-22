@@ -1,12 +1,13 @@
 # Modelo de dados
 
-O schema de referência é `docs/db/schema.sql` (Postgres 15+, validado em Postgres 16). Ele tem 17 tabelas em cinco blocos: pessoas e acesso, grupos, resenhas, votações e itens, segurança e métricas. A primeira migração do Drizzle reproduz esse arquivo; depois, toda mudança é feita por migração e refletida nele no mesmo PR.
+O schema de referência é `docs/db/schema.sql` (Postgres 15+, validado em Postgres 16). Ele tem 18 tabelas em cinco blocos: pessoas e acesso, grupos, resenhas, votações e itens, segurança e métricas. A primeira migração do Drizzle reproduz esse arquivo; depois, toda mudança é feita por migração e refletida nele no mesmo PR.
 
 ## Glossário (domínio → código)
 
 | Termo do produto | No código | Observação |
 | --- | --- | --- |
 | Usuário | `users` | Inclui o convidado sem login (ACE-01): `phone_e164` nulo |
+| Pedido de código por IP | `login_ip_requests` | Só para o limite por IP do login (ACE-02) |
 | Responsável legal | `guardians` | |
 | Consentimento | `consents`, `users.consent_status` | Histórico e estado atual |
 | Grupo | `groups` | |
@@ -45,6 +46,7 @@ A aplicação (Worker e Durable Object) é responsável por estas regras, cada u
 | --- | --- | --- |
 | `resenhas.exact_address` | 24 h após `closed_at` | Cron zera o campo e preenche `address_purged_at` (LOC-03) |
 | `login_codes` | Até expirar | Cron apaga expirados |
+| `login_ip_requests` | 1 h (janela do limite por IP) | Cron apaga; guarda só o hash do IP |
 | `sessions` | Até expirar ou ser revogada | Cron apaga expiradas |
 | Dados pessoais de `users` | Até a exclusão da conta | Ver abaixo |
 | `reports` | Em aberto (questão #7) | Definido pelo jurídico |
@@ -54,7 +56,7 @@ A aplicação (Worker e Durable Object) é responsável por estas regras, cada u
 
 A exclusão não apaga a linha de `users`, para não quebrar votos, itens e histórico dos amigos. Em até 24 h:
 
-1. `nickname` vira "ex-participante"; `photo_url`, `phone_e164` e `phone_verified_at` viram nulos; `birth_date` vira uma data neutra que mantém só a faixa (menor ou maior), e `deleted_at` é preenchido.
+1. `nickname` vira "ex-participante"; `photo_url`, `phone_e164` e `phone_verified_at` viram nulos; `birth_date` vira uma data neutra que mantém só a faixa (menor ou maior): para quem é menor, 31 de dezembro do ano de nascimento (assim a pessoa nunca passa a contar como maior antes da hora, e a regra de álcool continua valendo); para quem é maior, 1º de janeiro de 1900. `deleted_at` é preenchido.
 2. Sessões são revogadas e códigos de login apagados.
 3. Se o usuário for o único admin de um grupo, a administração passa ao membro aprovado mais antigo.
 
