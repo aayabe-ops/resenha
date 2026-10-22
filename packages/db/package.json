@@ -5,7 +5,8 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/schema/index.ts",
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

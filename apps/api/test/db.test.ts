@@ -10,6 +10,9 @@ describe('conexão com o Postgres', () => {
     try {
       const result = await db.execute<{ ok: number }>('select 1 as ok');
       expect(result.rows).toEqual([{ ok: 1 }]);
+      // Os testes nunca usam o banco de desenvolvimento
+      const database = await db.execute<{ name: string }>('select current_database() as name');
+      expect(database.rows[0]?.name).toBe('resenha_test');
     } finally {
       await close();
     }
