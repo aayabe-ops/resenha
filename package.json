@@ -1,0 +1,30 @@
+{
+  "name": "resenha",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @resenha/api --filter @resenha/web dev",
+    "build": "pnpm --filter @resenha/web build",
+    "start": "pnpm build && pnpm --filter @resenha/api exec wrangler dev",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @resenha/db generate",
+    "db:migrate": "pnpm --filter @resenha/db migrate",
+    "lint": "eslint . && prettier --check . && pnpm -r typecheck",
+    "format": "prettier --write .",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}

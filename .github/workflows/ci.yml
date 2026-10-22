@@ -1,0 +1,68 @@
+# CI da fase de desenvolvimento local: só lint e testes, sem deploy
+# (hospedagem ainda não decidida, questão em aberto #0).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: ESLint, Prettier e checagem de tipos
+        run: pnpm lint
+      - name: Migrações em dia com o schema Drizzle
+        run: |
+          pnpm db:generate
+          test -z "$(git status --porcelain packages/db/migrations)" || {
+            echo "O schema Drizzle mudou sem migração. Rode pnpm db:generate e faça commit."
+            git status --porcelain packages/db/migrations
+            exit 1
+          }
+
+  test:
+    name: Testes
+    runs-on: ubuntu-latest
+    services:
+      # Postgres efêmero do próprio runner, só para os testes
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: resenha
+          POSTGRES_PASSWORD: resenha
+          POSTGRES_DB: resenha
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U resenha -d resenha"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://resenha:resenha@localhost:5432/resenha
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
