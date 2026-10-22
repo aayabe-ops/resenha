@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+# Documentação é escrita à mão e não é reformatada
+**/*.md
+docs/
+packages/db/migrations/
+**/worker-configuration.d.ts
