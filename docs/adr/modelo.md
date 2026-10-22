@@ -1,6 +1,6 @@
 # ADR NNNN — Título curto da decisão
 
-- Status: Proposto | Aceito | Rejeitado | Substituído por NNNN
+- Status: Proposto | Aceito | Rejeitado | Adiado | Substituído por NNNN
 - Data da proposta: AAAA-MM-DD
 - Proposto por: nome e papel (arquiteto, engenheiro, analista de P&D, subagente arquiteto-rd)
 - Decisor: nome · data da decisão

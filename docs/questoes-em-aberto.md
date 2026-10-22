@@ -10,10 +10,11 @@ Formato: uma linha por questão, com quem precisa decidir e o que fica bloqueado
 | 2 | Regras exatas de consentimento do responsável para 15 a 17 anos (quando é exigido, forma de coleta e de comprovação) | Jurídico | Entrega 2 (ACE-04) |
 | 3 | Convidado sem conta que é menor (ACE-01) pode participar antes do consentimento do responsável? | Jurídico + Produto | Entrega 2 e 4 |
 | 4 | Onde ficam as fotos de perfil no MVP: antecipar o R2 ou usar avatar por iniciais até a fase 2 | Arquitetura + Produto (ADR) | Entrega 2 (ACE-01, ACE-05) |
-| 5 | Provedor do Postgres gerenciado em São Paulo — proposta no ADR 0005 (recomenda Neon) | Ayabe, aprovando o ADR 0005 | Entrega 1 |
+| 0 | Hospedagem e deploy (onde o app roda em produção, previews, staging) — adiado: desenvolvimento local primeiro | Ayabe, com o arquiteto | Lançamento do piloto |
+| 5 | Provedor do Postgres gerenciado em São Paulo — ADR 0005 adiado (análise pronta, recomenda Neon) | Ayabe, junto com a hospedagem | Lançamento do piloto |
 | 6 | Quem compõe a moderação da plataforma e qual o prazo de resposta a denúncias | Produto | Entrega 8 (SEG-04) |
 | 7 | Prazo de retenção das denúncias e das decisões de moderação | Jurídico | Entrega 8 |
 | 8 | Lista inicial de termos bloqueados (álcool e ofensas) | Produto | Entregas 5, 6 e 8 |
 | 9 | Telas visuais e tokens de design adaptados para resenha | Produto / Design | Entrega 4 em diante |
 | 10 | Textos de interface (linguagem da galera) | Produto | Entrega 2 em diante (usar `TODO(copy)` até lá) |
-| 11 | Ferramenta de erros — proposta no ADR 0006 (recomenda o nativo do Cloudflare no MVP) | Ayabe, aprovando o ADR 0006 | Entrega 1 |
+| 11 | Ferramenta de erros — ADR 0006 adiado (análise pronta, recomenda o nativo do Cloudflare) | Ayabe, junto com a hospedagem | Lançamento do piloto |

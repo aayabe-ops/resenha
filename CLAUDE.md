@@ -68,7 +68,9 @@ Qualquer código que quebre uma destas regras é um bug grave, mesmo que um requ
 
 TypeScript strict · React + Vite (PWA) servido pelo Cloudflare Workers · API Hono no Workers · Durable Objects com WebSocket (um por resenha) · Postgres gerenciado na região São Paulo via Hyperdrive · Drizzle ORM com migrações versionadas · login por código no WhatsApp Cloud API · Turnstile · Queues e Cron Triggers · Vitest (pool de Workers) e Playwright · monorepo com pnpm workspaces · GitHub Actions + Wrangler.
 
-Ainda não decidido (não escolha por conta própria): provedor do Postgres, armazenamento de fotos de perfil, ferramenta de erros. Ver `docs/questoes-em-aberto.md`.
+Ainda não decidido (não escolha por conta própria): hospedagem e deploy, provedor do Postgres, armazenamento de fotos de perfil, ferramenta de erros. Ver `docs/questoes-em-aberto.md`.
+
+**Fase atual: desenvolvimento local.** Tudo roda na máquina (Wrangler + Postgres em container). Não crie deploy, contas, segredos de nuvem nem configuração de produção. Login pelo WhatsApp e Turnstile usam modo de desenvolvimento (código exibido no console, chave de teste) até a hospedagem ser decidida.
 
 O runtime do Workers não é Node.js completo. Antes de usar qualquer API ou biblioteca, confirme que roda no Workers.
 

@@ -1,6 +1,6 @@
 # ADR 0005 — Provedor do Postgres gerenciado em São Paulo
 
-- Status: Proposto
+- Status: Adiado em 2026-10-21 — o MVP será desenvolvido localmente (Postgres em container); a hospedagem será discutida depois. A análise abaixo fica como insumo para essa discussão.
 - Data da proposta: 2026-10-21
 - Proposto por: Claude, no papel de arquiteto / analista de P&D
 - Decisor: Ayabe · pendente

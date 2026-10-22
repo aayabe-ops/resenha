@@ -1,6 +1,6 @@
 # ADR 0006 — Ferramenta de erros e observabilidade
 
-- Status: Proposto
+- Status: Adiado em 2026-10-21 — no desenvolvimento local, erros vão para o console do Wrangler; a ferramenta será decidida junto com a hospedagem.
 - Data da proposta: 2026-10-21
 - Proposto por: Claude, no papel de arquiteto / analista de P&D
 - Decisor: Ayabe · pendente

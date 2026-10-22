@@ -13,7 +13,7 @@ O código da Resenha é escrito por desenvolvedores e pelo Claude Code. Agentes 
 1. Toda decisão técnica relevante é registrada como ADR em `docs/adr/`, numerada em sequência (`NNNN-titulo-curto.md`), a partir do modelo `docs/adr/modelo.md`.
 2. Quem propõe: arquiteto, engenheiro ou analista de P&D (pessoa ou o subagente `arquiteto-rd`). O ADR nasce com status `Proposto`.
 3. Quem decide: o responsável pelo produto. O status passa a `Aceito` ou `Rejeitado`, com data e nome de quem decidiu. Só ADR `Aceito` pode ser implementado.
-4. Uma decisão substituída não é apagada: o ADR antigo recebe status `Substituído por NNNN`.
+4. Uma decisão substituída não é apagada: o ADR antigo recebe status `Substituído por NNNN`. Uma proposta que o decisor quer discutir mais tarde recebe status `Adiado`, com a data e o motivo; a análise fica guardada e nada dela é implementado.
 5. O radar tecnológico (`docs/radar-tecnologico.md`) registra tendências e alternativas em avaliação. Entrar no radar não autoriza uso; só um ADR aceito autoriza.
 6. O que exige ADR está listado em `CLAUDE.md`, seção "Governança técnica".
 

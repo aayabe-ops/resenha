@@ -68,7 +68,7 @@ Nome do produto em aberto: no código, usar `resenha` como nome provisório, con
 
 Cada entrega é um PR revisável, publicado num preview testável no celular antes da próxima começar.
 
-1. **Fundação.** Monorepo, Workers + Vite + Hono, Postgres via Hyperdrive (local: Postgres em container), Drizzle com a primeira migração reproduzindo `docs/db/schema.sql`, CI com testes e deploy de preview. Página inicial e `/api/health` no ar.
+1. **Fundação (local).** Monorepo, Workers + Vite + Hono rodando localmente com Wrangler, Postgres 16 em container (Docker Compose), Drizzle com a primeira migração reproduzindo `docs/db/schema.sql`, CI no GitHub Actions só com lint e testes. Página inicial e `/api/health` funcionando em `localhost`. Sem deploy, sem Hyperdrive de produção e sem contas de nuvem nesta fase.
 2. **Acesso.** Login por código no WhatsApp, Turnstile, sessão, data de nascimento, bloqueio abaixo de 15, consentimento do responsável, perfil mínimo, excluir conta. ACE-01 a ACE-06.
 3. **Grupos.** Criar grupo, link de convite, entrar só por link, aprovação e remoção, histórico. GRP-01 a GRP-04.
 4. **Resenha.** Criar em 3 toques, compartilhar com prévia, Vou / Talvez / Não vou, pedidos de entrada e aprovação, encerrar. RES-01 a RES-07.
@@ -128,7 +128,8 @@ Cada critério vira ao menos um teste automatizado. Os marcados (manual) são ve
 ## 6. Convenções do time
 
 - **Repositório:** monorepo com pnpm workspaces: `apps/web`, `apps/api`, `packages/db`, `packages/shared`.
-- **Ambientes:** local (Wrangler + Postgres em container), preview por PR com banco de staging, produção pelo `main`.
+- **Ambientes:** por enquanto só local (Wrangler + Postgres em container). Preview por PR, staging e produção serão definidos junto com a hospedagem (ADRs 0005 e 0006, adiados).
+- **Desenvolvimento local:** o Wrangler roda Workers e Durable Objects na máquina; no local, a conexão com o Postgres é direta (o Hyperdrive aceita uma string de conexão local para desenvolvimento). Nada do código pode depender de serviço de nuvem para rodar localmente.
 - **Segredos:** só em Wrangler secrets e GitHub Actions secrets.
 - **Branches e PRs:** um branch por entrega; PR revisado por uma pessoa; descrição lista os IDs atendidos.
 - **Testes:** cada critério de aceite vira ao menos um teste.
