@@ -18,4 +18,4 @@ Formato: uma linha por questão, com quem precisa decidir e o que fica bloqueado
 | 9 | Telas visuais e tokens de design adaptados para resenha | Produto / Design | Entrega 4 em diante |
 | 10 | Textos de interface (linguagem da galera) | Produto | Entrega 2 em diante (usar `TODO(copy)` até lá) |
 | 11 | Ferramenta de erros — ADR 0006 adiado (análise pronta, recomenda o nativo do Cloudflare) | Ayabe, junto com a hospedagem | Lançamento do piloto |
-| 12 | Driver do Postgres usado pelo Worker em tempo de execução (via Hyperdrive). Na entrega 1, `pg` entrou só como dependência de desenvolvimento para as migrações | Arquitetura (ADR) + Ayabe | Entrega 2 (primeira rota que acessa o banco) |
+| 12 | Driver do Postgres usado pelo Worker e pelos Durable Objects em tempo de execução (via Hyperdrive). Na entrega 1, `pg` entrou só como dependência de desenvolvimento para as migrações — ADR 0007 proposto (recomenda `pg` com `drizzle-orm/node-postgres`), aguardando decisão | Ayabe (ADR 0007) | Entrega 2 (primeira rota que acessa o banco) |

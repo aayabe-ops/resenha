@@ -25,6 +25,9 @@ Revisão sugerida: a cada fim de fase ou quando surgir uma necessidade nova.
 | Supabase (Postgres em `sa-east-1`) | Avaliar | Dados | Alternativa ao Neon; recursos de plataforma não seriam usados | ADR 0005 (Adiado) |
 | Workers Logs + Workers Issues | Avaliar | Observabilidade | Recomendado; decisão adiada até definir a hospedagem | ADR 0006 (Adiado) |
 | Sentry (região UE) | Avaliar | Observabilidade | Reavaliar antes do lançamento público, se faltar alerta | ADR 0006 (Adiado) |
+| `pg` (node-postgres) como driver de runtime, via `drizzle-orm/node-postgres` e Hyperdrive | Avaliar | Dados | Recomendado pela Cloudflare para Hyperdrive; hoje só é dependência de desenvolvimento (migrações). Bloqueia a entrega 2 | ADR 0007 (Proposto) |
+| `postgres` (postgres.js) como driver de runtime | Avaliar | Dados | Não recomendado: a Cloudflare não suporta Drizzle + Postgres.js sobre Hyperdrive. Vai para Evitar se o ADR 0007 for aceito | ADR 0007 (Proposto) |
+| Drivers serverless de provedor (ex.: `@neondatabase/serverless`) | Avaliar | Dados | Não recomendado: contornam o Hyperdrive e amarram a um provedor (ADR 0002). Vai para Evitar se o ADR 0007 for aceito | ADR 0007 (Proposto) |
 | Moderação automática de imagens | Avaliar | Segurança | Necessária na fase 2 (SEG-05) | Requisitos |
 | Cloudflare D1 | Evitar | Dados | Não roda na América do Sul | ADR 0002 |
 | Recursos proprietários de BaaS (Auth, Realtime, Storage de um provedor) | Evitar | Dados | Lock-in; o MVP usa só Postgres padrão | ADR 0002 |
