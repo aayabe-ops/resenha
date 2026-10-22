@@ -21,8 +21,10 @@ Revisão sugerida: a cada fim de fase ou quando surgir uma necessidade nova.
 | WhatsApp Cloud API (autenticação) | Adotar | Acesso | Login sem senha | ADR 0003 |
 | TypeScript, React + Vite, Hono, Zod, Vitest, Playwright, pnpm | Adotar | Código | Stack comum no mercado | ADR 0004 |
 | R2 | Avaliar | Arquivos | Fase 2 para o feed; avaliar antecipar para fotos de perfil | Questão em aberto #4 |
-| Provedor de Postgres (Supabase, Neon e outros com região São Paulo) | Avaliar | Dados | Escolher antes da entrega 1 | Questão em aberto #5 |
-| Sentry | Avaliar | Observabilidade | Confirmar plano e região de dados | Questão em aberto #11 |
+| Neon (Postgres em `aws-sa-east-1`) | Avaliar | Dados | Recomendado como provedor; aguarda decisão | ADR 0005 (Proposto) |
+| Supabase (Postgres em `sa-east-1`) | Avaliar | Dados | Alternativa ao Neon; recursos de plataforma não seriam usados | ADR 0005 (Proposto) |
+| Workers Logs + Workers Issues | Avaliar | Observabilidade | Recomendado para o MVP; aguarda decisão | ADR 0006 (Proposto) |
+| Sentry (região UE) | Avaliar | Observabilidade | Reavaliar antes do lançamento público, se faltar alerta | ADR 0006 (Proposto) |
 | Moderação automática de imagens | Avaliar | Segurança | Necessária na fase 2 (SEG-05) | Requisitos |
 | Cloudflare D1 | Evitar | Dados | Não roda na América do Sul | ADR 0002 |
 | Recursos proprietários de BaaS (Auth, Realtime, Storage de um provedor) | Evitar | Dados | Lock-in; o MVP usa só Postgres padrão | ADR 0002 |
