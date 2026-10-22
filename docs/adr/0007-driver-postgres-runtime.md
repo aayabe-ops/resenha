@@ -1,9 +1,9 @@
 # ADR 0007 — Driver do Postgres em tempo de execução (Worker e Durable Objects)
 
-- Status: Proposto
+- Status: Aceito
 - Data da proposta: 2026-10-21
 - Proposto por: Claude, no papel de arquiteto / analista de P&D
-- Decisor: Ayabe · pendente
+- Decisor: Ayabe · 2026-10-21
 
 ## Contexto
 
@@ -123,4 +123,9 @@ A recomendação muda se: a Cloudflare passar a suportar Drizzle + Postgres.js e
 
 ## Decisão
 
-Pendente.
+Aceita em 2026-10-21 por Ayabe, como proposta: opção B, `pg` (node-postgres) com `drizzle-orm/node-postgres`, via o binding do Hyperdrive, com as condições 1 a 6 da recomendação.
+
+- A função de conexão fica em `packages/db`, que passa a ter `pg` em `dependencies`; `apps/api` só chama essa função.
+- O `localConnectionString` do binding fica versionado em `apps/api/wrangler.jsonc`, com as mesmas credenciais só locais do `docker-compose.yml`. A variável `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` pode sobrescrevê-lo, e é o que o CI usa.
+- A configuração do cache do Hyperdrive em produção fica para a decisão de hospedagem e provedor (ADR 0005).
+- A entrega 2 começa pelo teste mínimo da condição 3; se algum dos pontos não confirmados falhar, o trabalho para e o decisor é avisado.
