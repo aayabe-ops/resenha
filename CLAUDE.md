@@ -94,6 +94,16 @@ Até a entrega 1 (fundação) terminar, só `docs/` existe.
 - Toda mudança de schema é feita por migração e reflete em `docs/db/schema.sql`.
 - Segredos só em Wrangler secrets e GitHub Actions secrets. Nunca no código nem em `.env` versionado.
 
+## Git e GitHub: sempre subir o trabalho
+
+Repositório: `https://github.com/aayabe-ops/resenha`. Todo trabalho fica no GitHub, nunca só na máquina.
+
+- Antes de começar: `git pull` no `main` e crie o branch da entrega (`entrega-N-nome-curto`, ex.: `entrega-1-fundacao`).
+- Commits pequenos, em português, um por passo concluído; faça `git push` logo após cada commit.
+- Nunca faça push direto no `main` e nunca faça merge: abra um PR do branch para o `main` e espere a aprovação do responsável.
+- Ao terminar a sessão, confirme que não há nada sem commit ou sem push (`git status` limpo e branch em dia com o remoto).
+- Se o push falhar, pare e avise; não apague nem reescreva histórico (`--force`, `reset --hard`) para contornar.
+
 ## Como trabalhar uma entrega
 
 1. Leia a entrega em `docs/spec.md` e os requisitos e critérios de aceite citados.
