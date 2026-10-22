@@ -1,0 +1,14 @@
+// Configuração só para desenvolvimento local. Deploy e ambientes de nuvem
+// ainda não foram decididos (questão em aberto #0).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "resenha",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // Um único Worker serve o PWA (apps/web/dist) e a API (/api/*).
+  "assets": {
+    "directory": "../web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+}
