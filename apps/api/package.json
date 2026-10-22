@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "[ -f .dev.vars ] || cp .dev.vars.example .dev.vars; mkdir -p .wrangler/dev-assets && wrangler dev --assets .wrangler/dev-assets",
+    "dev": "pnpm dev-vars && mkdir -p .wrangler/dev-assets && wrangler dev --assets .wrangler/dev-assets",
     "typegen": "wrangler types --strict-vars=false",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev-vars": "[ -f .dev.vars ] || cp .dev.vars.example .dev.vars",
+    "start": "pnpm dev-vars && wrangler dev"
   },
   "dependencies": {
     "@resenha/db": "workspace:^",
