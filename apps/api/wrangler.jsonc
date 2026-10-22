@@ -11,4 +11,15 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"],
   },
+  // Postgres via Hyperdrive (ADR 0007). O id é fictício até a hospedagem ser
+  // decidida (ADR 0005). No local, o Wrangler conecta direto no Postgres do
+  // docker-compose.yml; a variável CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE
+  // sobrescreve (é o que o CI e os testes usam).
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000",
+      "localConnectionString": "postgres://resenha:resenha@localhost:5432/resenha",
+    },
+  ],
 }
