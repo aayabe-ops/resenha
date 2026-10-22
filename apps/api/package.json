@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "mkdir -p ../web/dist && wrangler dev",
+    "dev": "mkdir -p .wrangler/dev-assets && wrangler dev --assets .wrangler/dev-assets",
     "typegen": "wrangler types",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"

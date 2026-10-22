@@ -23,7 +23,7 @@ pnpm dev                 # web em http://localhost:5173 (com /api encaminhado ao
 
 | Comando | O que faz |
 | --- | --- |
-| `pnpm dev` | Vite (com recarga) + `wrangler dev` da API em paralelo |
+| `pnpm dev` | Vite (com recarga) + `wrangler dev` da API em paralelo. Use http://localhost:5173; a porta 8787 serve só `/api/*` |
 | `pnpm start` | Build do PWA e um único Worker servindo site e API em http://localhost:8787 |
 | `pnpm lint` | ESLint, Prettier e checagem de tipos |
 | `pnpm test` | Testes (precisa do `pnpm db:up` para o teste do schema) |
