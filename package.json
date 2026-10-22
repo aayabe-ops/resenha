@@ -10,6 +10,8 @@
     "dev": "pnpm --parallel --filter @resenha/api --filter @resenha/web dev",
     "build": "pnpm --filter @resenha/web build",
     "start": "pnpm build && pnpm --filter @resenha/api exec wrangler dev",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
     "lint": "eslint . && prettier --check . && pnpm -r typecheck",
     "format": "prettier --write .",
     "test": "pnpm -r test"
