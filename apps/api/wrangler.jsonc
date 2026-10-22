@@ -5,6 +5,16 @@
   "name": "resenha",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
+  // Modos de desenvolvimento (CLAUDE.md, fase local): o Turnstile não é
+  // verificado e o código de login aparece no console do Wrangler.
+  "vars": {
+    "TURNSTILE_MODE": "dev",
+    "WHATSAPP_MODE": "dev",
+  },
+  // Limpeza de códigos, sessões e pedidos por IP expirados
+  "triggers": {
+    "crons": ["*/15 * * * *"],
+  },
   // Um único Worker serve o PWA (apps/web/dist) e a API (/api/*).
   "assets": {
     "directory": "../web/dist",
