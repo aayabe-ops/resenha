@@ -12,6 +12,8 @@
     "start": "pnpm build && pnpm --filter @resenha/api exec wrangler dev",
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @resenha/db generate",
+    "db:migrate": "pnpm --filter @resenha/db migrate",
     "lint": "eslint . && prettier --check . && pnpm -r typecheck",
     "format": "prettier --write .",
     "test": "pnpm -r test"
