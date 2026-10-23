@@ -108,7 +108,7 @@ describe('ACE-05: perfil de outra pessoa', () => {
     const response = await api(`/users/${bia?.id}`, { cookie: viewer });
     expect(response.status).toBe(200);
     const profile = await response.json();
-    expect(profile).toEqual({ id: bia?.id, nickname: 'Bia', photoUrl: null });
+    expect(profile).toEqual({ id: bia?.id, nickname: 'Bia', photoUrl: null, commonGroups: [] });
     expect(JSON.stringify(profile)).not.toContain('5511933334444');
   });
 

@@ -50,6 +50,11 @@ export function randomToken(): string {
   return toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
 }
 
+/** Código do link de convite de grupo (128 bits, 22 caracteres). */
+export function randomInviteCode(): string {
+  return toBase64Url(crypto.getRandomValues(new Uint8Array(16)));
+}
+
 /** Código de 6 dígitos com distribuição uniforme. */
 export function randomLoginCode(): string {
   const limit = Math.floor(0x1_0000_0000 / 1_000_000) * 1_000_000;

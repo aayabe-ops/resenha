@@ -94,3 +94,9 @@ export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
   });
   await next();
 });
+
+/** Exige conta com celular: grupos não aceitam convidado (spec, seção 3). */
+export const requirePhone = createMiddleware<AppEnv>(async (c, next) => {
+  if (c.var.user.phoneE164 === null) return apiError(c, 403, 'phone_required');
+  await next();
+});

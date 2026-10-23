@@ -1,5 +1,5 @@
 // Convidado, perfil e exclusão de conta (ACE-01, ACE-05, ACE-06).
-import { loginCodes, sessions, users } from '@resenha/db';
+import { groupMembers, groups, loginCodes, sessions, users } from '@resenha/db';
 import {
   guestBody,
   isMinor,
@@ -8,7 +8,8 @@ import {
   type Me,
   type PublicProfile,
 } from '@resenha/shared';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { AppEnv } from '../lib/context';
@@ -84,13 +85,50 @@ account.delete('/me', requireUser, async (c) => {
     if (user.phoneE164) {
       await tx.delete(loginCodes).where(eq(loginCodes.phoneE164, user.phoneE164));
     }
+
+    // Se era o único admin de um grupo, a administração passa ao membro
+    // aprovado mais antigo; depois a pessoa sai de todos os grupos.
+    const adminOf = await tx
+      .select({ groupId: groupMembers.groupId })
+      .from(groupMembers)
+      .where(
+        and(
+          eq(groupMembers.userId, user.id),
+          eq(groupMembers.role, 'admin'),
+          eq(groupMembers.status, 'approved'),
+        ),
+      );
+    for (const { groupId } of adminOf) {
+      const others = await tx
+        .select({ userId: groupMembers.userId, role: groupMembers.role })
+        .from(groupMembers)
+        .where(
+          and(
+            eq(groupMembers.groupId, groupId),
+            eq(groupMembers.status, 'approved'),
+            ne(groupMembers.userId, user.id),
+          ),
+        )
+        .orderBy(asc(groupMembers.createdAt));
+      const successor = others.some((other) => other.role === 'admin') ? null : others[0];
+      if (successor) {
+        await tx
+          .update(groupMembers)
+          .set({ role: 'admin', updatedAt: sql`now()` })
+          .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, successor.userId)));
+      }
+    }
+    await tx
+      .update(groupMembers)
+      .set({ status: 'removed', role: 'member', updatedAt: sql`now()` })
+      .where(eq(groupMembers.userId, user.id));
   });
   clearSessionCookie(c);
   return c.body(null, 204);
 });
 
-// Perfil visto por outra pessoa: só apelido e foto (ACE-05). Grupos em comum
-// entram com a entrega 3. Só por id e com sessão; nada de busca.
+// Perfil visto por outra pessoa: só apelido, foto e grupos em comum (ACE-05).
+// Só por id e com sessão; nada de busca.
 account.get('/users/:id', requireUser, async (c) => {
   const id = z.uuid().safeParse(c.req.param('id'));
   if (!id.success) return apiError(c, 404, 'not_found');
@@ -102,5 +140,21 @@ account.get('/users/:id', requireUser, async (c) => {
     .where(eq(users.id, id.data))
     .limit(1);
   if (!profile) return apiError(c, 404, 'not_found');
-  return c.json(profile satisfies PublicProfile);
+
+  const theirs = alias(groupMembers, 'theirs');
+  const commonGroups = await db
+    .select({ id: groups.id, name: groups.name })
+    .from(groupMembers)
+    .innerJoin(theirs, eq(theirs.groupId, groupMembers.groupId))
+    .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+    .where(
+      and(
+        eq(groupMembers.userId, c.var.user.id),
+        eq(groupMembers.status, 'approved'),
+        eq(theirs.userId, profile.id),
+        eq(theirs.status, 'approved'),
+      ),
+    )
+    .orderBy(asc(groups.name));
+  return c.json({ ...profile, commonGroups } satisfies PublicProfile);
 });

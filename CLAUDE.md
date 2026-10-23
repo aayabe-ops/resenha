@@ -84,7 +84,7 @@ packages/shared  tipos e validação (Zod) compartilhados
 docs/            fonte da verdade do produto e da arquitetura
 ```
 
-Até a entrega 1 (fundação) terminar, só `docs/` existe.
+O código existe desde a entrega 1. As entregas concluídas e as que faltam estão em `docs/spec.md`, seção 4; o que ainda não foi decidido, em `docs/questoes-em-aberto.md`.
 
 ## Convenções
 

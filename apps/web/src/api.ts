@@ -1,4 +1,13 @@
-import type { ApiErrorCode, Me, VerifyCodeResponse } from '@resenha/shared';
+import type {
+  ApiErrorCode,
+  GroupDetail,
+  GroupHistoryItem,
+  GroupSummary,
+  InviteInfo,
+  Me,
+  MembershipStatus,
+  VerifyCodeResponse,
+} from '@resenha/shared';
 
 export class ApiFailure extends Error {
   constructor(public readonly code: ApiErrorCode) {
@@ -31,6 +40,25 @@ export const api = {
     call('/auth/register', { body: { registrationToken, nickname, birthDate } }),
   logout: () => call('/auth/logout', { method: 'POST' }),
   deleteAccount: () => call('/me', { method: 'DELETE' }),
+  listGroups: () => call<GroupSummary[]>('/groups'),
+  createGroup: (name: string) =>
+    call<{ id: string; name: string; inviteCode: string }>('/groups', { body: { name } }),
+  getGroup: (id: string) => call<GroupDetail>(`/groups/${encodeURIComponent(id)}`),
+  groupHistory: (id: string) =>
+    call<GroupHistoryItem[]>(`/groups/${encodeURIComponent(id)}/history`),
+  getInvite: (code: string) => call<InviteInfo>(`/invites/${encodeURIComponent(code)}`),
+  joinInvite: (code: string) =>
+    call<{ status: MembershipStatus }>(`/invites/${encodeURIComponent(code)}/join`, {
+      method: 'POST',
+    }),
+  approveMember: (groupId: string, userId: string) =>
+    call(`/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}/approve`, {
+      method: 'POST',
+    }),
+  removeMember: (groupId: string, userId: string) =>
+    call(`/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}/remove`, {
+      method: 'POST',
+    }),
 };
 
 // TODO(copy): revisar todas as mensagens de erro
@@ -44,6 +72,9 @@ const messages: Record<ApiErrorCode, string> = {
   invalid_registration: 'Seu código venceu. Começa de novo.',
   unauthorized: 'Sua sessão acabou. Entra de novo.',
   not_found: 'Não encontrado.',
+  forbidden: 'Você não pode fazer isso.',
+  phone_required: 'Para isso, entra com seu celular.',
+  group_full: 'O grupo já tem 200 pessoas.',
   internal: 'Deu ruim aqui. Tenta de novo daqui a pouco.',
 };
 

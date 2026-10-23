@@ -61,6 +61,7 @@ flowchart LR
 | Sem álcool para menores | Se qualquer participante aprovado for menor, "só bebida" vira "cada um com o seu" e itens com termos da categoria álcool são bloqueados |
 | Login pelo WhatsApp | Código de 6 dígitos por template de autenticação; validade de 10 min; 5 tentativas erradas bloqueiam por 15 min; até 3 códigos por número a cada 15 min e 10 por IP a cada hora (IP guardado só como hash). Sessão de 30 dias, renovada com o uso (decidido em 21/10/2026) |
 | Convidado sem login | Até 10 convidados criados por IP a cada hora (IP guardado só como hash; decidido em 22/10/2026) |
+| Grupos | Só por link: "meus grupos" lista apenas os grupos em que a pessoa é membro aprovada. Criar e entrar em grupo exige login com celular (o convidado sem celular é só para resenha). Quem foi recusado ou removido não pode pedir de novo pelo mesmo link. Conta excluída sai dos grupos; se era o único admin, a administração passa ao membro aprovado mais antigo. Até 200 membros aprovados (RNF-06). Sem foto até a questão #4 (decidido em 22/10/2026) |
 | Moderação | O anfitrião remove e bloqueia na resenha dele e vê as denúncias dela. Toda denúncia também vai para a fila da plataforma |
 
 Nome do produto em aberto: no código, usar `resenha` como nome provisório, configurável.
