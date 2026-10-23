@@ -7,9 +7,9 @@ Formato: uma linha por questão, com quem precisa decidir e o que fica bloqueado
 | # | Questão | Quem decide | Bloqueia |
 | --- | --- | --- | --- |
 | 1 | Nome definitivo do produto e registro de marca | Produto | Nada no MVP (nome configurável) |
-| 2 | Regras exatas de consentimento do responsável para 15 a 17 anos (quando é exigido, forma de coleta e de comprovação) | Jurídico | Entrega 2 (ACE-04) |
-| 3 | Convidado sem conta que é menor (ACE-01) pode participar antes do consentimento do responsável? | Jurídico + Produto | Entrega 2 e 4 |
-| 4 | Onde ficam as fotos de perfil no MVP: antecipar o R2 ou usar avatar por iniciais até a fase 2 | Arquitetura + Produto (ADR) | Entrega 2 (ACE-01, ACE-05) |
+| 2 | Regras exatas de consentimento do responsável para 15 a 17 anos (quando é exigido, forma de coleta e de comprovação) | Jurídico | Fluxo de consentimento do ACE-04 (o resto da entrega 2 já foi feito) |
+| 3 | Convidado sem conta que é menor (ACE-01) pode participar antes do consentimento do responsável? | Jurídico + Produto | Entrega 4 (convidado menor entrando pelo link da resenha) |
+| 4 | Onde ficam as fotos de perfil no MVP: antecipar o R2 ou usar avatar por iniciais até a fase 2 | Arquitetura + Produto (ADR) | Fotos de perfil e de grupo (ACE-01, ACE-05, GRP-01) e fotos dos confirmados (RES-04) |
 | 0 | Hospedagem e deploy (onde o app roda em produção, previews, staging) — adiado: desenvolvimento local primeiro | Ayabe, com o arquiteto | Lançamento do piloto |
 | 5 | Provedor do Postgres gerenciado em São Paulo — ADR 0005 adiado (análise pronta, recomenda Neon) | Ayabe, junto com a hospedagem | Lançamento do piloto |
 | 6 | Quem compõe a moderação da plataforma e qual o prazo de resposta a denúncias | Produto | Entrega 8 (SEG-04) |
@@ -18,3 +18,4 @@ Formato: uma linha por questão, com quem precisa decidir e o que fica bloqueado
 | 9 | Telas visuais e tokens de design adaptados para resenha | Produto / Design | Entrega 4 em diante |
 | 10 | Textos de interface (linguagem da galera) | Produto | Entrega 2 em diante (usar `TODO(copy)` até lá) |
 | 11 | Ferramenta de erros — ADR 0006 adiado (análise pronta, recomenda o nativo do Cloudflare) | Ayabe, junto com a hospedagem | Lançamento do piloto |
+| 12 | Membro pode sair de um grupo por conta própria? (não está nos requisitos; fora da entrega 3) | Produto | Nada no MVP por enquanto |
