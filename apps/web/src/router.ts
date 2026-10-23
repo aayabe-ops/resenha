@@ -26,6 +26,7 @@ export type Route =
   | { name: 'home' }
   | { name: 'group'; id: string }
   | { name: 'invite'; code: string }
+  | { name: 'resenha'; code: string }
   | { name: 'notFound' };
 
 export function matchRoute(path: string): Route {
@@ -34,5 +35,7 @@ export function matchRoute(path: string): Route {
   if (group?.[1]) return { name: 'group', id: decodeURIComponent(group[1]) };
   const invite = path.match(/^\/g\/([^/]+)$/);
   if (invite?.[1]) return { name: 'invite', code: decodeURIComponent(invite[1]) };
+  const resenha = path.match(/^\/r\/([^/]+)$/);
+  if (resenha?.[1]) return { name: 'resenha', code: decodeURIComponent(resenha[1]) };
   return { name: 'notFound' };
 }

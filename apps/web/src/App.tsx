@@ -7,6 +7,7 @@ import { Home } from './screens/Home';
 import { InvitePage } from './screens/InvitePage';
 import { Link } from './screens/Link';
 import { Login } from './screens/Login';
+import { ResenhaPage } from './screens/ResenhaPage';
 
 type State = { name: 'loading' } | { name: 'loggedOut' } | { name: 'loggedIn'; me: Me };
 
@@ -27,9 +28,11 @@ export function App() {
     };
   }, [sessionVersion]);
 
+  const onSessionChange = () => setSessionVersion((version) => version + 1);
+
   function renderRoute(me: Me) {
     // Grupos exigem login com celular (spec, seção 3). TODO(copy): revisar
-    if (route.name !== 'home' && me.isGuest) {
+    if (route.name !== 'home' && route.name !== 'resenha' && me.isGuest) {
       return <p>Para entrar em grupos, entra com seu celular.</p>;
     }
     switch (route.name) {
@@ -47,6 +50,8 @@ export function App() {
         return <GroupPage id={route.id} />;
       case 'invite':
         return <InvitePage code={route.code} />;
+      case 'resenha':
+        return <ResenhaPage code={route.code} me={me} onSessionChange={onSessionChange} />;
       case 'notFound':
         // TODO(copy): revisar
         return (
@@ -61,9 +66,13 @@ export function App() {
     <main>
       <h1>{APP_NAME}</h1>
       {/* Quem abre um convite sem sessão faz login e continua no mesmo endereço */}
-      {state.name === 'loggedOut' && (
-        <Login onLoggedIn={() => setSessionVersion((version) => version + 1)} />
-      )}
+      {/* A página da resenha abre sem sessão e oferece celular ou convidado (ACE-01) */}
+      {state.name === 'loggedOut' &&
+        (route.name === 'resenha' ? (
+          <ResenhaPage code={route.code} me={null} onSessionChange={onSessionChange} />
+        ) : (
+          <Login onLoggedIn={onSessionChange} />
+        ))}
       {state.name === 'loggedIn' && renderRoute(state.me)}
     </main>
   );
