@@ -44,6 +44,9 @@ const messages: Record<ApiErrorCode, string> = {
   invalid_registration: 'Seu código venceu. Começa de novo.',
   unauthorized: 'Sua sessão acabou. Entra de novo.',
   not_found: 'Não encontrado.',
+  forbidden: 'Você não pode fazer isso.',
+  phone_required: 'Para isso, entra com seu celular.',
+  group_full: 'O grupo já tem 200 pessoas.',
   internal: 'Deu ruim aqui. Tenta de novo daqui a pouco.',
 };
 

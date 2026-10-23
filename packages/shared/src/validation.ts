@@ -11,6 +11,11 @@ export const birthDateSchema = z.iso
 // Mesmos limites de users.nickname (1 a 30 caracteres)
 export const nicknameSchema = z.string().trim().min(1).max(30);
 
+// Mesmos limites de groups.name (1 a 40 caracteres)
+export const groupNameSchema = z.string().trim().min(1).max(40);
+
+export const createGroupBody = z.object({ name: groupNameSchema });
+
 export const loginCodeSchema = z.string().regex(/^[0-9]{6}$/);
 
 export const requestCodeBody = z.object({
@@ -39,3 +44,4 @@ export type RequestCodeBody = z.infer<typeof requestCodeBody>;
 export type VerifyCodeBody = z.infer<typeof verifyCodeBody>;
 export type RegisterBody = z.infer<typeof registerBody>;
 export type GuestBody = z.infer<typeof guestBody>;
+export type CreateGroupBody = z.infer<typeof createGroupBody>;
