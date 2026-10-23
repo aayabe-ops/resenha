@@ -92,3 +92,8 @@ button[aria-pressed='true'] {
   height: 100%;
   background: #222;
 }
+
+.missing {
+  border-left: 4px solid #a10000;
+  padding-left: 0.75rem;
+}
