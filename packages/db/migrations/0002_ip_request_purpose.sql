@@ -1,0 +1,2 @@
+ALTER TABLE "login_ip_requests" ADD COLUMN "purpose" text DEFAULT 'login_code' NOT NULL;--> statement-breakpoint
+ALTER TABLE "login_ip_requests" ADD CONSTRAINT "login_ip_requests_purpose_check" CHECK ("login_ip_requests"."purpose" IN ('login_code', 'guest'));

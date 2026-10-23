@@ -60,6 +60,7 @@ flowchart LR
 | Idade mínima de 15 anos | Data de nascimento obrigatória no primeiro acesso; menos de 15 recusa sem gravar dados pessoais. De 15 a 17, conta de menor, com consentimento do responsável conforme parecer jurídico |
 | Sem álcool para menores | Se qualquer participante aprovado for menor, "só bebida" vira "cada um com o seu" e itens com termos da categoria álcool são bloqueados |
 | Login pelo WhatsApp | Código de 6 dígitos por template de autenticação; validade de 10 min; 5 tentativas erradas bloqueiam por 15 min; até 3 códigos por número a cada 15 min e 10 por IP a cada hora (IP guardado só como hash). Sessão de 30 dias, renovada com o uso (decidido em 21/10/2026) |
+| Convidado sem login | Até 10 convidados criados por IP a cada hora (IP guardado só como hash; decidido em 22/10/2026) |
 | Moderação | O anfitrião remove e bloqueia na resenha dele e vê as denúncias dela. Toda denúncia também vai para a fila da plataforma |
 
 Nome do produto em aberto: no código, usar `resenha` como nome provisório, configurável.

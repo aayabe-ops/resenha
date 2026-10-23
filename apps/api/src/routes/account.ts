@@ -13,6 +13,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import type { AppEnv } from '../lib/context';
 import { apiError, readBody } from '../lib/http';
+import { hashedClientIp, ipLimitReached, recordIpRequest } from '../lib/ip-limit';
 import { clearSessionCookie, requireUser, startSession } from '../lib/session';
 
 const DELETED_NICKNAME = 'ex-participante';
@@ -20,13 +21,18 @@ const DELETED_NICKNAME = 'ex-participante';
 export const account = new Hono<AppEnv>();
 
 // Convidado sem login: apelido e nascimento, sem celular (ACE-01). A foto
-// depende de onde ficam os arquivos (questão em aberto #4).
+// depende de onde ficam os arquivos (questão em aberto #4). Limite por IP
+// decidido em 22/10/2026 (spec, seção 3).
 account.post('/guests', async (c) => {
   const body = await readBody(c, guestBody);
   if (!body) return apiError(c, 400, 'invalid_request');
   if (isUnderMinAge(body.birthDate)) return apiError(c, 403, 'under_age');
 
   const db = await c.var.db();
+  const ipHash = await hashedClientIp(c);
+  if (await ipLimitReached(db, ipHash, 'guest')) return apiError(c, 429, 'rate_limited');
+  await recordIpRequest(db, ipHash, 'guest');
+
   const [created] = await db
     .insert(users)
     .values({

@@ -45,6 +45,38 @@ describe('ACE-01: convidado sem conta', () => {
     expect(await countRows('sessions')).toBe(0);
   });
 
+  it('limita a 10 convidados por IP a cada hora, separado do limite do login', async () => {
+    const ip = '198.51.100.20';
+    for (let i = 0; i < 10; i++) {
+      const response = await api('/guests', {
+        body: { nickname: `Visita ${i}`, birthDate: birthDateForAge(16) },
+        ip,
+      });
+      expect(response.status).toBe(201);
+    }
+    const eleventh = await api('/guests', {
+      body: { nickname: 'Visita 10', birthDate: birthDateForAge(16) },
+      ip,
+    });
+    expect(eleventh.status).toBe(429);
+    expect(await eleventh.json()).toEqual({ error: 'rate_limited' });
+
+    // O mesmo IP ainda pode pedir código de login
+    const code = await api('/auth/code', {
+      body: { phone: '+5511944445555', birthDate: birthDateForAge(20), turnstileToken: 'dev' },
+      ip,
+    });
+    expect(code.status).toBe(202);
+
+    // Passada a janela de 1 h, volta a aceitar
+    await sql(`update login_ip_requests set created_at = now() - interval '61 minutes'`);
+    const later = await api('/guests', {
+      body: { nickname: 'Visita 11', birthDate: birthDateForAge(16) },
+      ip,
+    });
+    expect(later.status).toBe(201);
+  });
+
   it('recusa apelido vazio ou com mais de 30 caracteres', async () => {
     expect((await createGuest(birthDateForAge(16), '   ')).response.status).toBe(400);
     expect((await createGuest(birthDateForAge(16), 'x'.repeat(31))).response.status).toBe(400);

@@ -1,5 +1,5 @@
 // Login por código no WhatsApp e cadastro (ACE-02, ACE-03, ACE-04).
-import { loginCodes, loginIpRequests, sessions, users } from '@resenha/db';
+import { loginCodes, sessions, users } from '@resenha/db';
 import {
   isMinor,
   isUnderMinAge,
@@ -13,6 +13,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../lib/context';
 import { hmac, randomLoginCode, safeEqual } from '../lib/crypto';
 import { apiError, clientIp, readBody } from '../lib/http';
+import { hashedClientIp, ipLimitReached, recordIpRequest } from '../lib/ip-limit';
 import { createRegistrationToken, readRegistrationToken } from '../lib/registration';
 import { clearSessionCookie, requireUser, startSession } from '../lib/session';
 import { verifyTurnstile } from '../lib/turnstile';
@@ -24,8 +25,6 @@ const MAX_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
 const CODES_PER_PHONE = 3;
 const PHONE_WINDOW_MINUTES = 15;
-const CODES_PER_IP = 10;
-const IP_WINDOW_MINUTES = 60;
 
 const minutesAgo = (minutes: number) => sql`now() - make_interval(mins => ${minutes})`;
 const minutesFromNow = (minutes: number) => sql`now() + make_interval(mins => ${minutes})`;
@@ -67,20 +66,11 @@ auth.post('/code', async (c) => {
     );
   if ((phoneCount?.total ?? 0) >= CODES_PER_PHONE) return apiError(c, 429, 'rate_limited');
 
-  const ipHash = await hmac(c.env.AUTH_SECRET, `ip:${ip}`);
-  const [ipCount] = await db
-    .select({ total: count() })
-    .from(loginIpRequests)
-    .where(
-      and(
-        eq(loginIpRequests.ipHash, ipHash),
-        gt(loginIpRequests.createdAt, minutesAgo(IP_WINDOW_MINUTES)),
-      ),
-    );
-  if ((ipCount?.total ?? 0) >= CODES_PER_IP) return apiError(c, 429, 'rate_limited');
+  const ipHash = await hashedClientIp(c);
+  if (await ipLimitReached(db, ipHash, 'login_code')) return apiError(c, 429, 'rate_limited');
 
   const code = randomLoginCode();
-  await db.insert(loginIpRequests).values({ ipHash });
+  await recordIpRequest(db, ipHash, 'login_code');
   await db.insert(loginCodes).values({
     phoneE164: body.phone,
     codeHash: await codeHash(c.env.AUTH_SECRET, body.phone, code),

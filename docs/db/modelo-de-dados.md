@@ -7,7 +7,7 @@ O schema de referência é `docs/db/schema.sql` (Postgres 15+, validado em Postg
 | Termo do produto | No código | Observação |
 | --- | --- | --- |
 | Usuário | `users` | Inclui o convidado sem login (ACE-01): `phone_e164` nulo |
-| Pedido de código por IP | `login_ip_requests` | Só para o limite por IP do login (ACE-02) |
+| Pedido por IP | `login_ip_requests` | Só para os limites por IP do código de login (ACE-02) e da criação de convidado (ACE-01), contados separados por `purpose` |
 | Responsável legal | `guardians` | |
 | Consentimento | `consents`, `users.consent_status` | Histórico e estado atual |
 | Grupo | `groups` | |
