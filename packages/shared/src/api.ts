@@ -95,7 +95,18 @@ export interface PollOption {
   label: string;
   splitModel: SplitModel | null;
   suggestedBy: { id: string; nickname: string } | null;
+  /** "Pode ser lá em casa" (DIV-04): a opção mostra só o bairro. */
+  isHome: boolean;
   voters: { id: string; nickname: string }[];
+}
+
+/** Item de "quem leva o quê" (DIV-01, DIV-03). */
+export interface ResenhaItem {
+  id: string;
+  description: string;
+  owner: { id: string; nickname: string } | null;
+  status: 'open' | 'secured';
+  createdBy: { id: string; nickname: string };
 }
 
 export interface Poll {
@@ -157,6 +168,17 @@ export interface ResenhaLive {
   neighborhood: string | null;
   startsAt: string | null;
   splitModel: SplitModel | null;
+  /** Anfitrião, definido quando uma casa vence a votação de onde. */
+  host: { id: string; nickname: string } | null;
+  /**
+   * Endereço exato: só para aprovados com "Vou", organizador e anfitrião
+   * (LOC-02). Para todos os outros, sempre null.
+   */
+  exactAddress: string | null;
+  items: ResenhaItem[];
+  /** Rateio (DIV-02): total informado e valor por quem vai, para cima no centavo. */
+  totalCostCents: number | null;
+  perPersonCents: number | null;
 }
 
 /** Página da resenha. Sem acesso aprovado, só nome, dia, bairro e contagem (LOC-01). */
@@ -172,6 +194,7 @@ export interface ResenhaView extends ResenhaLive {
     access: AccessStatus | null;
     rsvp: Rsvp | null;
     isOrganizer: boolean;
+    isHost: boolean;
     isGroupMember: boolean;
   } | null;
 }

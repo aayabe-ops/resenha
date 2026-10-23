@@ -2,6 +2,7 @@ import type { Me, ResenhaLive, ResenhaRequest, ResenhaView, Rsvp } from '@resenh
 import { useCallback, useEffect, useState } from 'react';
 import { api, errorMessage } from '../api';
 import { formatLongDate, formatTime } from '../format';
+import { Items, Place, Split } from './Division';
 import { Polls } from './Polls';
 import { GuestEntry } from './GuestEntry';
 import { Link } from './Link';
@@ -216,6 +217,8 @@ export function ResenhaPage({
 
   const open = resenha.status !== 'closed';
   const isOrganizer = resenha.me.isOrganizer;
+  // Organizador e anfitrião aprovam, recusam e removem (spec, seção 3)
+  const isManager = isOrganizer || resenha.me.isHost;
   const shareUrl = `${window.location.origin}/r/${code}?de=${encodeURIComponent(resenha.me.id)}`;
   const shareText = `${title} · ${formatLongDate(resenha.date)}\n${shareUrl}`;
 
@@ -256,12 +259,15 @@ export function ResenhaPage({
         </>
       )}
 
+      <Place resenha={resenha} busy={busy} act={(action) => void act(action)} />
       <Polls
         resenha={resenha}
         myId={resenha.me.id}
         busy={busy}
         act={(action) => void act(action)}
       />
+      <Split resenha={resenha} busy={busy} act={(action) => void act(action)} />
+      <Items resenha={resenha} busy={busy} act={(action) => void act(action)} />
 
       <h3>Quem tá na resenha</h3>
       <ul>
@@ -270,7 +276,7 @@ export function ResenhaPage({
             {person.nickname}
             {person.isOrganizer && ' (organiza)'}
             {person.rsvp && ` · ${RSVP_LABELS[person.rsvp]}`}
-            {isOrganizer && open && !person.isOrganizer && (
+            {isManager && open && !person.isOrganizer && person.id !== resenha.host?.id && (
               <button
                 type="button"
                 disabled={busy}
@@ -283,7 +289,7 @@ export function ResenhaPage({
         ))}
       </ul>
 
-      {isOrganizer && resenha.requests.length > 0 && (
+      {isManager && resenha.requests.length > 0 && (
         <>
           <h3>Pedidos para entrar</h3>
           <ul>

@@ -28,6 +28,18 @@ export function formatDateTime(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** Centavos em reais ("R$ 33,34"). */
+export function formatMoney(cents: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+}
+
+/** "100,50" ou "100.50" em centavos; null se não for um valor válido. */
+export function parseMoney(text: string): number | null {
+  const normalized = text.trim().replace(/\./g, '').replace(',', '.');
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
+  return Math.round(Number(normalized) * 100);
+}
+
 /** AAAA-MM-DD para o formato brasileiro, sem depender do fuso do aparelho. */
 export function formatDate(isoDate: string): string {
   return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(

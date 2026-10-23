@@ -5,13 +5,29 @@
 // guarda o id da resenha para o alarme do prazo). As permissões são checadas
 // aqui, com o id do usuário autenticado pelo Worker.
 import { connect, type Database } from '@resenha/db/client';
-import { groupMembers, participations, pollOptions, polls, resenhas, votes } from '@resenha/db';
-import { timeLabelSchema, type AccessStatus, type ResenhaLive, type Rsvp } from '@resenha/shared';
-import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
+import {
+  groupMembers,
+  items,
+  participations,
+  pollOptions,
+  polls,
+  resenhas,
+  votes,
+} from '@resenha/db';
+import { timeLabelSchema, type AccessStatus, type Rsvp } from '@resenha/shared';
+import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { DurableObject } from 'cloudflare:workers';
 import type { Bindings } from './lib/context';
-import { applyMinorRule, applyWinner, leaders, loadPolls, markDecidedIfDone } from './lib/polls';
-import { loadLive } from './lib/resenha-state';
+import {
+  applyMinorRule,
+  applyWinner,
+  hasApprovedMinor,
+  homeLabel,
+  leaders,
+  loadPolls,
+  markDecidedIfDone,
+} from './lib/polls';
+import { isManager, liveFor, loadLive } from './lib/resenha-state';
 import { isBlockedText, mentionsPerson } from './lib/text-filter';
 
 export type JoinResult = AccessStatus | 'not_found' | 'closed' | 'forbidden';
@@ -21,8 +37,6 @@ export type Decision = 'approve' | 'reject' | 'remove';
 
 // Código de fechamento para quem perdeu o acesso (RES-06)
 export const REMOVED_CLOSE_CODE = 4403;
-
-const ORGANIZER_TAG = 'organizer';
 
 export class ResenhaRoom extends DurableObject<Bindings> {
   private async withDb<T>(work: (db: Database) => Promise<T>): Promise<T> {
@@ -39,12 +53,12 @@ export class ResenhaRoom extends DurableObject<Bindings> {
     const userId = request.headers.get('X-Resenha-User');
     const resenhaId = request.headers.get('X-Resenha-Id');
     if (!userId || !resenhaId) return new Response(null, { status: 400 });
-    const isOrganizer = request.headers.get('X-Resenha-Role') === ORGANIZER_TAG;
 
     const { 0: client, 1: server } = new WebSocketPair();
-    this.ctx.acceptWebSocket(server, isOrganizer ? [userId, ORGANIZER_TAG] : [userId]);
-    const live = await this.withDb((db) => loadLive(db, resenhaId));
-    server.send(JSON.stringify(this.viewFor(live, isOrganizer)));
+    // O papel (organizador, anfitrião, quem vai) é calculado a cada envio
+    this.ctx.acceptWebSocket(server, [userId]);
+    const state = await this.withDb((db) => loadLive(db, resenhaId));
+    server.send(JSON.stringify(liveFor(state, userId)));
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -56,26 +70,13 @@ export class ResenhaRoom extends DurableObject<Bindings> {
     ws.close(code === 1005 ? 1000 : code);
   }
 
-  private viewFor(live: ResenhaLive, isOrganizer: boolean): ResenhaLive {
-    return {
-      status: live.status,
-      counts: live.counts,
-      participants: live.participants,
-      requests: isOrganizer ? live.requests : [],
-      polls: live.polls,
-      allowSuggestions: live.allowSuggestions,
-      neighborhood: live.neighborhood,
-      startsAt: live.startsAt,
-      splitModel: live.splitModel,
-    };
-  }
-
   private async broadcast(db: Database, resenhaId: string) {
-    const live = await loadLive(db, resenhaId);
+    const state = await loadLive(db, resenhaId);
     for (const ws of this.ctx.getWebSockets()) {
-      const isOrganizer = this.ctx.getTags(ws).includes(ORGANIZER_TAG);
+      const [userId] = this.ctx.getTags(ws);
+      if (!userId) continue;
       try {
-        ws.send(JSON.stringify(this.viewFor(live, isOrganizer)));
+        ws.send(JSON.stringify(liveFor(state, userId)));
       } catch {
         // conexão já fechada
       }
@@ -188,12 +189,17 @@ export class ResenhaRoom extends DurableObject<Bindings> {
   ): Promise<ActionResult> {
     return this.withDb(async (db) => {
       const [resenha] = await db
-        .select({ status: resenhas.status, organizerId: resenhas.organizerId })
+        .select({
+          status: resenhas.status,
+          organizerId: resenhas.organizerId,
+          hostId: resenhas.hostId,
+        })
         .from(resenhas)
         .where(eq(resenhas.id, resenhaId));
-      if (!resenha || resenha.organizerId !== actorId) return 'not_found';
+      // Organizador e anfitrião gerenciam (spec, seção 3)
+      if (!resenha || !isManager(resenha, actorId)) return 'not_found';
       if (resenha.status === 'closed') return 'closed';
-      if (targetId === resenha.organizerId) return 'forbidden';
+      if (isManager(resenha, targetId)) return 'forbidden';
 
       const from: AccessStatus = decision === 'remove' ? 'approved' : 'pending';
       const to: AccessStatus =
@@ -279,7 +285,11 @@ export class ResenhaRoom extends DurableObject<Bindings> {
 
       if (context.kind === 'when' && !timeLabelSchema.safeParse(label).success) return 'invalid';
       if (context.kind === 'where') {
-        if ((await isBlockedText(db, label)) || (await mentionsPerson(db, resenhaId, label))) {
+        const alcohol = await hasApprovedMinor(db, resenhaId);
+        if (
+          (await isBlockedText(db, label, { alcohol })) ||
+          (await mentionsPerson(db, resenhaId, label))
+        ) {
           return 'blocked';
         }
       }
@@ -443,6 +453,175 @@ export class ResenhaRoom extends DurableObject<Bindings> {
         .where(and(eq(resenhas.id, resenhaId), eq(resenhas.organizerId, actorId)))
         .returning({ id: resenhas.id });
       if (updated.length === 0) return 'not_found';
+      await this.broadcast(db, resenhaId);
+      return 'ok';
+    });
+  }
+
+  /**
+   * "Pode ser lá em casa" (DIV-04): vira opção de onde mostrando só o
+   * bairro. Uma oferta por pessoa. Nenhum endereço é guardado aqui.
+   */
+  async offerHome(resenhaId: string, actorId: string, neighborhood: string): Promise<ActionResult> {
+    return this.withDb(async (db) => {
+      const [where] = await db
+        .select({ id: polls.id, status: polls.status })
+        .from(polls)
+        .where(and(eq(polls.resenhaId, resenhaId), eq(polls.kind, 'where')));
+      if (!where) return 'not_found';
+      const context = await this.pollContext(db, resenhaId, where.id, actorId);
+      if (!context || context.access !== 'approved') return 'not_found';
+      if (context.resenhaStatus === 'closed') return 'closed';
+      if (context.pollStatus === 'closed' || context.expired) return 'poll_closed';
+
+      const [already] = await db
+        .select({ id: pollOptions.id })
+        .from(pollOptions)
+        .where(and(eq(pollOptions.pollId, where.id), eq(pollOptions.offeredHomeBy, actorId)));
+      if (already) return 'invalid';
+
+      const alcohol = await hasApprovedMinor(db, resenhaId);
+      if (
+        (await isBlockedText(db, neighborhood, { alcohol })) ||
+        (await mentionsPerson(db, resenhaId, neighborhood))
+      ) {
+        return 'blocked';
+      }
+
+      await db.insert(pollOptions).values({
+        pollId: where.id,
+        label: homeLabel(neighborhood),
+        suggestedBy: actorId,
+        offeredHomeBy: actorId,
+        neighborhood,
+      });
+      await this.broadcast(db, resenhaId);
+      return 'ok';
+    });
+  }
+
+  /** Endereço exato, informado pelo anfitrião depois que a casa vence (LOC-02). */
+  async setAddress(resenhaId: string, actorId: string, address: string): Promise<ActionResult> {
+    return this.withDb(async (db) => {
+      const [resenha] = await db
+        .select({ status: resenhas.status, hostId: resenhas.hostId })
+        .from(resenhas)
+        .where(eq(resenhas.id, resenhaId));
+      if (!resenha || resenha.hostId !== actorId) return 'not_found';
+      if (resenha.status === 'closed') return 'closed';
+      await db
+        .update(resenhas)
+        .set({ exactAddress: address, updatedAt: sql`now()` })
+        .where(eq(resenhas.id, resenhaId));
+      await this.broadcast(db, resenhaId);
+      return 'ok';
+    });
+  }
+
+  /** Valor total do rateio, informado pelo organizador (DIV-02). */
+  async setTotalCost(
+    resenhaId: string,
+    actorId: string,
+    totalCostCents: number | null,
+  ): Promise<ActionResult> {
+    return this.withDb(async (db) => {
+      const [resenha] = await db
+        .select({
+          status: resenhas.status,
+          organizerId: resenhas.organizerId,
+          splitModel: resenhas.splitModel,
+        })
+        .from(resenhas)
+        .where(eq(resenhas.id, resenhaId));
+      if (!resenha || resenha.organizerId !== actorId) return 'not_found';
+      if (resenha.status === 'closed') return 'closed';
+      if (resenha.splitModel !== 'equal_split') return 'forbidden';
+      await db
+        .update(resenhas)
+        .set({ totalCostCents, updatedAt: sql`now()` })
+        .where(eq(resenhas.id, resenhaId));
+      await this.broadcast(db, resenhaId);
+      return 'ok';
+    });
+  }
+
+  /** Participante aprovado numa resenha aberta com "cada um leva" (DIV-01). */
+  private async itemContext(db: Database, resenhaId: string, actorId: string) {
+    const [row] = await db
+      .select({
+        status: resenhas.status,
+        organizerId: resenhas.organizerId,
+        splitModel: resenhas.splitModel,
+        access: participations.access,
+      })
+      .from(resenhas)
+      .leftJoin(
+        participations,
+        and(eq(participations.resenhaId, resenhas.id), eq(participations.userId, actorId)),
+      )
+      .where(eq(resenhas.id, resenhaId));
+    if (!row || row.access !== 'approved') return 'not_found' as const;
+    if (row.status === 'closed') return 'closed' as const;
+    if (row.splitModel !== 'each_brings') return 'forbidden' as const;
+    return row;
+  }
+
+  async addItem(resenhaId: string, actorId: string, description: string): Promise<ActionResult> {
+    return this.withDb(async (db) => {
+      const context = await this.itemContext(db, resenhaId, actorId);
+      if (typeof context === 'string') return context;
+      // Ofensivo sempre; álcool quando há menor aprovado (spec, seção 3)
+      const alcohol = await hasApprovedMinor(db, resenhaId);
+      if (await isBlockedText(db, description, { alcohol })) return 'blocked';
+      await db.insert(items).values({ resenhaId, description, createdBy: actorId });
+      await this.broadcast(db, resenhaId);
+      return 'ok';
+    });
+  }
+
+  /** Assumir, largar, marcar como garantido ou apagar um item (DIV-01, DIV-03). */
+  async updateItem(
+    resenhaId: string,
+    actorId: string,
+    itemId: string,
+    action: 'claim' | 'release' | 'secure' | 'unsecure' | 'delete',
+  ): Promise<ActionResult> {
+    return this.withDb(async (db) => {
+      const context = await this.itemContext(db, resenhaId, actorId);
+      if (typeof context === 'string') return context;
+      const [item] = await db
+        .select({ ownerId: items.ownerId, createdBy: items.createdBy })
+        .from(items)
+        .where(and(eq(items.id, itemId), eq(items.resenhaId, resenhaId)));
+      if (!item) return 'not_found';
+      const isOrganizer = context.organizerId === actorId;
+      const where = and(eq(items.id, itemId), eq(items.resenhaId, resenhaId));
+
+      if (action === 'claim') {
+        // No máximo um responsável: só assume se ninguém assumiu (atômico)
+        const claimed = await db
+          .update(items)
+          .set({ ownerId: actorId, updatedAt: sql`now()` })
+          .where(and(where, isNull(items.ownerId)))
+          .returning({ id: items.id });
+        if (claimed.length === 0) return 'forbidden';
+      } else if (action === 'release') {
+        if (item.ownerId !== actorId) return 'forbidden';
+        await db
+          .update(items)
+          .set({ ownerId: null, status: 'open', updatedAt: sql`now()` })
+          .where(where);
+      } else if (action === 'secure' || action === 'unsecure') {
+        if (item.ownerId !== actorId && !isOrganizer) return 'forbidden';
+        if (action === 'secure' && item.ownerId === null) return 'invalid';
+        await db
+          .update(items)
+          .set({ status: action === 'secure' ? 'secured' : 'open', updatedAt: sql`now()` })
+          .where(where);
+      } else {
+        if (item.createdBy !== actorId && !isOrganizer) return 'forbidden';
+        await db.delete(items).where(where);
+      }
       await this.broadcast(db, resenhaId);
       return 'ok';
     });

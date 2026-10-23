@@ -40,6 +40,20 @@ export const optionBody = z.object({ label: z.string().trim().min(1).max(60) });
 // Opção de horário: hora no dia da resenha (HH:MM)
 export const timeLabelSchema = z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/);
 
+// DIV-04: quem oferece a casa informa só o bairro ("Uma casa em <bairro>" cabe em 60)
+export const offerHomeBody = z.object({ neighborhood: z.string().trim().min(1).max(48) });
+
+// LOC-02: endereço exato, informado pelo anfitrião
+export const addressBody = z.object({ address: z.string().trim().min(1).max(200) });
+
+// DIV-01: mesmos limites de items.description
+export const itemBody = z.object({ description: z.string().trim().min(1).max(60) });
+
+// DIV-02: valor total em centavos (até R$ 100 mil)
+export const totalCostBody = z.object({
+  totalCostCents: z.number().int().min(0).max(10_000_000).nullable(),
+});
+
 export const voteBody = z.object({ optionId: z.uuid() });
 
 export const closePollBody = z.object({ optionId: z.uuid().nullish() });

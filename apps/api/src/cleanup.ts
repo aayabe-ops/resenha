@@ -1,12 +1,13 @@
 import { connect } from '@resenha/db/client';
-import { loginCodes, loginIpRequests, sessions } from '@resenha/db';
+import { loginCodes, loginIpRequests, resenhas, sessions } from '@resenha/db';
 import { and, isNotNull, lt, or, sql } from 'drizzle-orm';
 import type { Bindings } from './lib/context';
 
 /**
  * Tarefa agendada (Cron): apaga códigos de login vencidos (mantém os que
- * ainda bloqueiam), sessões vencidas ou revogadas e pedidos por IP com mais
- * de 1 h (retenção em modelo-de-dados.md).
+ * ainda bloqueiam), sessões vencidas ou revogadas, pedidos por IP com mais
+ * de 1 h e o endereço exato 24 h depois do encerramento (LOC-03; retenção em
+ * modelo-de-dados.md).
  */
 export async function cleanupExpired(env: Pick<Bindings, 'HYPERDRIVE'>): Promise<void> {
   const { db, close } = await connect(env.HYPERDRIVE.connectionString);
@@ -25,6 +26,15 @@ export async function cleanupExpired(env: Pick<Bindings, 'HYPERDRIVE'>): Promise
     await db
       .delete(loginIpRequests)
       .where(lt(loginIpRequests.createdAt, sql`now() - interval '1 hour'`));
+    await db
+      .update(resenhas)
+      .set({ exactAddress: null, addressPurgedAt: sql`now()` })
+      .where(
+        and(
+          isNotNull(resenhas.exactAddress),
+          lt(resenhas.closedAt, sql`now() - interval '24 hours'`),
+        ),
+      );
   } finally {
     await close();
   }

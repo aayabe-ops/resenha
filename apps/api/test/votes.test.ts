@@ -166,26 +166,40 @@ describe('VOT-03: sugestões', () => {
     expect((await suggest(resenha.id, split.id, ana.cookie, 'Pix')).status).toBe(403);
   });
 
-  it('o filtro bloqueia termos da lista, sem ligar para maiúscula ou acento', async () => {
+  it('o filtro bloqueia termos ofensivos, sem ligar para maiúscula ou acento', async () => {
     const { bia, resenha } = await scenario();
     await sql(
-      `insert into blocked_terms (term, category) values ('cerveja', 'alcohol'), ('palavrão feio', 'offensive')`,
+      `insert into blocked_terms (term, category) values ('idiota', 'offensive'), ('palavrão feio', 'offensive')`,
     );
     const where = await poll(resenha.inviteCode, bia.cookie, 'where');
 
-    const blocked = await suggest(resenha.id, where.id, bia.cookie, 'Bar da CERVÉJA');
+    const blocked = await suggest(resenha.id, where.id, bia.cookie, 'Bar dos IDIÓTAS idiota');
     expect(blocked.status).toBe(422);
     expect(await blocked.json()).toEqual({ error: 'blocked_text' });
     expect((await suggest(resenha.id, where.id, bia.cookie, 'Palavrao  FEIO total')).status).toBe(
       422,
     );
-    // Palavra inteira: "cervejaria" não é "cerveja"
-    expect((await suggest(resenha.id, where.id, bia.cookie, 'Perto da cervejaria')).status).toBe(
-      204,
-    );
+    // Palavra inteira: "idiotas" não é "idiota"
+    expect((await suggest(resenha.id, where.id, bia.cookie, 'Praça dos idiotas')).status).toBe(204);
     // Termo desativado não bloqueia
-    await sql(`update blocked_terms set active = false where term = 'cerveja'`);
-    expect((await suggest(resenha.id, where.id, bia.cookie, 'Cerveja Hall')).status).toBe(204);
+    await sql(`update blocked_terms set active = false where term = 'idiota'`);
+    expect((await suggest(resenha.id, where.id, bia.cookie, 'Idiota Bar')).status).toBe(204);
+  });
+
+  it('termos de álcool só bloqueiam quando há menor aprovado', async () => {
+    const { ana, bia, group, resenha } = await scenario();
+    await sql(`insert into blocked_terms (term, category) values ('cerveja', 'alcohol')`);
+    const where = await poll(resenha.inviteCode, bia.cookie, 'where');
+    expect((await suggest(resenha.id, where.id, bia.cookie, 'Cervejaria do Zé')).status).toBe(204);
+    expect((await suggest(resenha.id, where.id, bia.cookie, 'Bar da Cerveja')).status).toBe(204);
+
+    const teen = await newUser(logs, 'Teca');
+    await sql(`update users set birth_date = $1 where id = $2`, [birthDateForAge(16), teen.id]);
+    await addToGroup(ana, teen, group);
+    await join(resenha.inviteCode, teen.cookie);
+    expect((await suggest(resenha.id, where.id, bia.cookie, 'Outro bar da CERVÉJA')).status).toBe(
+      422,
+    );
   });
 });
 

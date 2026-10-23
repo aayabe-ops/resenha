@@ -72,7 +72,11 @@ function PollCard({
   act: (action: () => Promise<unknown>) => void;
 }) {
   const [label, setLabel] = useState('');
+  const [homeNeighborhood, setHomeNeighborhood] = useState('');
   const [deadline, setDeadline] = useState('');
+  const alreadyOffered = poll.options.some(
+    (option) => option.isHome && option.suggestedBy?.id === myId,
+  );
   const pollOpen = poll.status === 'open' && resenha.status !== 'closed';
   const totalVotes = poll.options.reduce((sum, option) => sum + option.voters.length, 0);
   const winner = poll.options.find((option) => option.id === poll.winningOptionId);
@@ -107,6 +111,9 @@ function PollCard({
               <div className="bar" aria-hidden="true">
                 <div style={{ width: `${share}%` }} />
               </div>
+              {option.isHome && option.suggestedBy && (
+                <small>oferecida por {option.suggestedBy.nickname} · </small>
+              )}
               {option.voters.length > 0 && (
                 <small>{option.voters.map((voter) => voter.nickname).join(', ')}</small>
               )}
@@ -146,6 +153,31 @@ function PollCard({
           </label>
           <button type="submit" disabled={busy}>
             Sugerir
+          </button>
+        </form>
+      )}
+
+      {pollOpen && poll.kind === 'where' && !alreadyOffered && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!homeNeighborhood.trim()) return;
+            act(async () => {
+              await api.offerHome(resenha.id, homeNeighborhood.trim());
+              setHomeNeighborhood('');
+            });
+          }}
+        >
+          <label>
+            Pode ser lá em casa? Diz só o bairro
+            <input
+              maxLength={48}
+              value={homeNeighborhood}
+              onChange={(event) => setHomeNeighborhood(event.target.value)}
+            />
+          </label>
+          <button type="submit" disabled={busy}>
+            Oferecer minha casa
           </button>
         </form>
       )}

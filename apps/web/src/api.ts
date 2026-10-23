@@ -104,6 +104,23 @@ export const api = {
     ),
   setSuggestions: (resenhaId: string, allow: boolean) =>
     call(`/resenhas/${encodeURIComponent(resenhaId)}/suggestions`, { body: { allow } }),
+  offerHome: (resenhaId: string, neighborhood: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/home`, { body: { neighborhood } }),
+  setAddress: (resenhaId: string, address: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/address`, { body: { address } }),
+  setTotalCost: (resenhaId: string, totalCostCents: number | null) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/total`, { body: { totalCostCents } }),
+  addItem: (resenhaId: string, description: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/items`, { body: { description } }),
+  itemAction: (
+    resenhaId: string,
+    itemId: string,
+    action: 'claim' | 'release' | 'secure' | 'unsecure' | 'delete',
+  ) =>
+    call(
+      `/resenhas/${encodeURIComponent(resenhaId)}/items/${encodeURIComponent(itemId)}/${action}`,
+      { method: 'POST' },
+    ),
   closeResenha: (resenhaId: string) =>
     call(`/resenhas/${encodeURIComponent(resenhaId)}/close`, { method: 'POST' }),
   removeMember: (groupId: string, userId: string) =>
