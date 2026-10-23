@@ -75,6 +75,7 @@ const messages: Record<ApiErrorCode, string> = {
   forbidden: 'Você não pode fazer isso.',
   phone_required: 'Para isso, entra com seu celular.',
   group_full: 'O grupo já tem 200 pessoas.',
+  resenha_closed: 'Essa resenha já foi encerrada.',
   internal: 'Deu ruim aqui. Tenta de novo daqui a pouco.',
 };
 

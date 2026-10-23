@@ -13,6 +13,7 @@ export type ApiErrorCode =
   | 'forbidden'
   | 'phone_required'
   | 'group_full'
+  | 'resenha_closed'
   | 'internal';
 
 export interface ApiError {
@@ -77,4 +78,71 @@ export interface InviteInfo {
   groupId: string;
   name: string;
   status: MembershipStatus | null;
+}
+
+export type Rsvp = 'going' | 'maybe' | 'not_going';
+export type AccessStatus = 'pending' | 'approved' | 'rejected' | 'removed';
+export type PollKind = 'where' | 'when' | 'split';
+export type ResenhaStatus = 'open' | 'decided' | 'closed';
+
+/** Resenha ativa na página do grupo. */
+export interface ResenhaSummary {
+  id: string;
+  name: string | null;
+  date: string;
+  status: ResenhaStatus;
+  inviteCode: string;
+}
+
+export interface ResenhaCounts {
+  going: number;
+  maybe: number;
+  notGoing: number;
+}
+
+/** Participante aprovado (RES-04); só quem é aprovado recebe a lista. */
+export interface ResenhaParticipant {
+  id: string;
+  nickname: string;
+  photoUrl: string | null;
+  rsvp: Rsvp | null;
+  isOrganizer: boolean;
+}
+
+/** Pedido de entrada visto pelo organizador (RES-05). */
+export interface ResenhaRequest {
+  id: string;
+  nickname: string;
+  photoUrl: string | null;
+  inviteSource: 'group_link' | 'resenha_link';
+  invitedBy: { id: string; nickname: string } | null;
+  commonFriends: { id: string; nickname: string }[];
+}
+
+/** Estado ao vivo que o Durable Object envia pelo WebSocket. */
+export interface ResenhaLive {
+  status: ResenhaStatus;
+  counts: ResenhaCounts;
+  participants: ResenhaParticipant[];
+  /** Só o organizador recebe; para os demais, vazio. */
+  requests: ResenhaRequest[];
+}
+
+/** Página da resenha. Sem acesso aprovado, só nome, dia, bairro e contagem (LOC-01). */
+export interface ResenhaView extends ResenhaLive {
+  id: string;
+  groupId: string;
+  name: string | null;
+  date: string;
+  neighborhood: string | null;
+  organizer: { id: string; nickname: string };
+  polls: { kind: PollKind; status: 'open' | 'closed' }[];
+  /** null quando quem abre o link ainda não tem sessão. */
+  me: {
+    id: string;
+    access: AccessStatus | null;
+    rsvp: Rsvp | null;
+    isOrganizer: boolean;
+    isGroupMember: boolean;
+  } | null;
 }

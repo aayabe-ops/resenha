@@ -16,6 +16,24 @@ export const groupNameSchema = z.string().trim().min(1).max(40);
 
 export const createGroupBody = z.object({ name: groupNameSchema });
 
+// Mesmos limites de resenhas.name (1 a 60 caracteres, opcional)
+export const resenhaNameSchema = z.string().trim().min(1).max(60);
+
+export const pollKindSchema = z.enum(['where', 'when', 'split']);
+
+// RES-01: nome opcional, dia e quais votações abrir. Turnstile na criação
+// de resenha (spec, seção 1).
+export const createResenhaBody = z.object({
+  name: resenhaNameSchema.nullish(),
+  date: z.iso.date().refine((value) => value >= todayIso()),
+  polls: z.array(pollKindSchema).max(3),
+  turnstileToken: z.string().min(1),
+});
+
+export const rsvpBody = z.object({ rsvp: z.enum(['going', 'maybe', 'not_going']) });
+
+export const joinResenhaBody = z.object({ from: z.uuid().nullish() });
+
 export const loginCodeSchema = z.string().regex(/^[0-9]{6}$/);
 
 export const requestCodeBody = z.object({
@@ -45,3 +63,4 @@ export type VerifyCodeBody = z.infer<typeof verifyCodeBody>;
 export type RegisterBody = z.infer<typeof registerBody>;
 export type GuestBody = z.infer<typeof guestBody>;
 export type CreateGroupBody = z.infer<typeof createGroupBody>;
+export type CreateResenhaBody = z.infer<typeof createResenhaBody>;

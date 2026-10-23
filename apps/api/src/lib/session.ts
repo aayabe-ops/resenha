@@ -3,7 +3,7 @@ import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { createMiddleware } from 'hono/factory';
-import type { AppEnv } from './context';
+import type { AppEnv, SessionUser } from './context';
 import { randomToken, sha256 } from './crypto';
 import { apiError } from './http';
 
@@ -41,12 +41,12 @@ export async function startSession(c: Context<AppEnv>, userId: string): Promise<
 }
 
 /**
- * Exige sessão válida e usuário ativo. A consulta usa now(), então nunca vem
- * do cache do Hyperdrive (ADR 0007, condição 5).
+ * Usuário da sessão, ou null. A consulta usa now(), então nunca vem do cache
+ * do Hyperdrive (ADR 0007, condição 5). Renova a sessão com o uso.
  */
-export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
+async function sessionUser(c: Context<AppEnv>): Promise<SessionUser | null> {
   const token = getCookie(c, SESSION_COOKIE);
-  if (!token) return apiError(c, 401, 'unauthorized');
+  if (!token) return null;
 
   const db = await c.var.db();
   const [row] = await db
@@ -73,7 +73,7 @@ export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
 
   if (!row) {
     clearSessionCookie(c);
-    return apiError(c, 401, 'unauthorized');
+    return null;
   }
 
   if (row.expiresAt.getTime() - Date.now() < RENEW_WHEN_LEFT_MS) {
@@ -84,14 +84,27 @@ export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
     writeCookie(c, token);
   }
 
-  c.set('user', {
+  return {
     id: row.id,
     sessionId: row.sessionId,
     nickname: row.nickname,
     photoUrl: row.photoUrl,
     phoneE164: row.phoneE164,
     birthDate: row.birthDate,
-  });
+  };
+}
+
+/** Exige sessão válida e usuário ativo. */
+export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
+  const user = await sessionUser(c);
+  if (!user) return apiError(c, 401, 'unauthorized');
+  c.set('user', user);
+  await next();
+});
+
+/** Carrega o usuário se houver sessão, sem exigir (páginas abertas por link). */
+export const optionalUser = createMiddleware<AppEnv>(async (c, next) => {
+  c.set('viewer', await sessionUser(c));
   await next();
 });
 

@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api, birthDateForAge, captureConsole, registerUser, resetDatabase, sql } from './helpers';
+import {
+  api,
+  birthDateForAge,
+  captureConsole,
+  createGroup as createGroupFor,
+  newUser as newUserFor,
+  resetDatabase,
+  sql,
+} from './helpers';
 
 let logs: ReturnType<typeof captureConsole>;
 
@@ -11,20 +19,6 @@ beforeEach(async () => {
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-let phoneCounter = 0;
-async function newUser(nickname: string) {
-  phoneCounter += 1;
-  const phone = `+55119${String(10_000_000 + phoneCounter).padStart(8, '0')}`;
-  const cookie = await registerUser(logs, { phone, nickname });
-  const [row] = await sql<{ id: string }>('select id from users where phone_e164 = $1', [phone]);
-  return { cookie, id: row?.id ?? '' };
-}
-
-async function createGroup(cookie: string, name = 'Galera do 3º') {
-  const response = await api('/groups', { body: { name }, cookie });
-  return { response, group: (await response.json()) as { id: string; inviteCode: string } };
-}
 
 async function join(cookie: string, inviteCode: string) {
   return api(`/invites/${inviteCode}/join`, { method: 'POST', cookie });
@@ -43,6 +37,9 @@ async function remove(adminCookie: string, groupId: string, userId: string) {
     cookie: adminCookie,
   });
 }
+
+const newUser = (nickname: string) => newUserFor(logs, nickname);
+const createGroup = createGroupFor;
 
 describe('GRP-01: criar grupo', () => {
   it('cria com link de convite único e o criador vira admin', async () => {
