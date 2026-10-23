@@ -1,13 +1,20 @@
 import type { Me, ResenhaLive, ResenhaRequest, ResenhaView, Rsvp } from '@resenha/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { api, errorMessage } from '../api';
-import { formatLongDate } from '../format';
+import { formatLongDate, formatTime } from '../format';
+import { Polls } from './Polls';
 import { GuestEntry } from './GuestEntry';
 import { Link } from './Link';
 import { Login } from './Login';
 
 // TODO(copy): revisar todos os textos desta tela
 const RSVP_LABELS: Record<Rsvp, string> = { going: 'Vou', maybe: 'Talvez', not_going: 'Não vou' };
+const SPLIT_LABELS = {
+  equal_split: 'Rateio igual',
+  each_brings: 'Cada um leva uma coisa',
+  own_drinks: 'Só bebida',
+  each_their_own: 'Cada um com o seu',
+} as const;
 
 // Código com que o servidor fecha a conexão de quem foi removido (RES-06)
 const REMOVED_CLOSE_CODE = 4403;
@@ -132,8 +139,11 @@ export function ResenhaPage({
       <h2>{title}</h2>
       <p>
         {formatLongDate(resenha.date)}
+        {resenha.startsAt && ` · ${formatTime(resenha.startsAt)}`}
         {resenha.neighborhood && ` · ${resenha.neighborhood}`}
       </p>
+      {resenha.splitModel && <p>Divisão: {SPLIT_LABELS[resenha.splitModel]}</p>}
+      {resenha.status === 'decided' && <p>Tudo decidido!</p>}
       <p>
         {resenha.counts.going} vão · {resenha.counts.maybe} talvez
       </p>
@@ -245,6 +255,13 @@ export function ResenhaPage({
           </a>
         </>
       )}
+
+      <Polls
+        resenha={resenha}
+        myId={resenha.me.id}
+        busy={busy}
+        act={(action) => void act(action)}
+      />
 
       <h3>Quem tá na resenha</h3>
       <ul>

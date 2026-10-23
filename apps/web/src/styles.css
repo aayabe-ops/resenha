@@ -66,3 +66,29 @@ button[aria-pressed='true'] {
   font-weight: 700;
   outline: 2px solid #111;
 }
+
+.poll {
+  border-top: 1px solid #ccc;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.options {
+  list-style: none;
+  padding: 0;
+}
+
+.options li {
+  margin-bottom: 0.75rem;
+}
+
+.bar {
+  height: 6px;
+  background: #e5e5e5;
+  margin-top: 0.25rem;
+}
+
+.bar > div {
+  height: 100%;
+  background: #222;
+}

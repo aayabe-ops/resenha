@@ -14,6 +14,9 @@ export type ApiErrorCode =
   | 'phone_required'
   | 'group_full'
   | 'resenha_closed'
+  | 'poll_closed'
+  | 'blocked_text'
+  | 'tie'
   | 'internal';
 
 export interface ApiError {
@@ -84,6 +87,27 @@ export type Rsvp = 'going' | 'maybe' | 'not_going';
 export type AccessStatus = 'pending' | 'approved' | 'rejected' | 'removed';
 export type PollKind = 'where' | 'when' | 'split';
 export type ResenhaStatus = 'open' | 'decided' | 'closed';
+export type SplitModel = 'equal_split' | 'each_brings' | 'own_drinks' | 'each_their_own';
+
+/** Opção com placar e quem votou nela (VOT-04). */
+export interface PollOption {
+  id: string;
+  label: string;
+  splitModel: SplitModel | null;
+  suggestedBy: { id: string; nickname: string } | null;
+  voters: { id: string; nickname: string }[];
+}
+
+export interface Poll {
+  id: string;
+  kind: PollKind;
+  status: 'open' | 'closed';
+  closesAt: string | null;
+  winningOptionId: string | null;
+  /** Fechada sem vencedora e com empate: o organizador escolhe entre estas (VOT-05). */
+  tiedOptionIds: string[];
+  options: PollOption[];
+}
 
 /** Resenha ativa na página do grupo. */
 export interface ResenhaSummary {
@@ -126,6 +150,13 @@ export interface ResenhaLive {
   participants: ResenhaParticipant[];
   /** Só o organizador recebe; para os demais, vazio. */
   requests: ResenhaRequest[];
+  /** Votações com opções e placar; só para participantes aprovados. */
+  polls: Poll[];
+  allowSuggestions: boolean;
+  /** Regras definidas pelas votações vencedoras (VOT-06). */
+  neighborhood: string | null;
+  startsAt: string | null;
+  splitModel: SplitModel | null;
 }
 
 /** Página da resenha. Sem acesso aprovado, só nome, dia, bairro e contagem (LOC-01). */
@@ -134,9 +165,7 @@ export interface ResenhaView extends ResenhaLive {
   groupId: string;
   name: string | null;
   date: string;
-  neighborhood: string | null;
   organizer: { id: string; nickname: string };
-  polls: { kind: PollKind; status: 'open' | 'closed' }[];
   /** null quando quem abre o link ainda não tem sessão. */
   me: {
     id: string;

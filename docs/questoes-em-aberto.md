@@ -14,7 +14,7 @@ Formato: uma linha por questão, com quem precisa decidir e o que fica bloqueado
 | 5 | Provedor do Postgres gerenciado em São Paulo — ADR 0005 adiado (análise pronta, recomenda Neon) | Ayabe, junto com a hospedagem | Lançamento do piloto |
 | 6 | Quem compõe a moderação da plataforma e qual o prazo de resposta a denúncias | Produto | Entrega 8 (SEG-04) |
 | 7 | Prazo de retenção das denúncias e das decisões de moderação | Jurídico | Entrega 8 |
-| 8 | Lista inicial de termos bloqueados (álcool e ofensas) | Produto | Entregas 5, 6 e 8 |
+| 8 | Lista inicial de termos bloqueados (álcool e ofensas). O filtro já funciona com a tabela `blocked_terms` desde a entrega 5; falta o conteúdo | Produto | Filtro de termos real nas entregas 5, 6 e 8 (hoje só o bloqueio de nomes de pessoas atua) |
 | 9 | Telas visuais e tokens de design adaptados para resenha | Produto / Design | Entrega 4 em diante |
 | 10 | Textos de interface (linguagem da galera) | Produto | Entrega 2 em diante (usar `TODO(copy)` até lá) |
 | 11 | Ferramenta de erros — ADR 0006 adiado (análise pronta, recomenda o nativo do Cloudflare) | Ayabe, junto com a hospedagem | Lançamento do piloto |

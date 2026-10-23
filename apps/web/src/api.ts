@@ -83,6 +83,27 @@ export const api = {
       `/resenhas/${encodeURIComponent(resenhaId)}/participants/${encodeURIComponent(userId)}/${decision}`,
       { method: 'POST' },
     ),
+  suggestOption: (resenhaId: string, pollId: string, label: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/polls/${encodeURIComponent(pollId)}/options`, {
+      body: { label },
+    }),
+  vote: (resenhaId: string, pollId: string, optionId: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/polls/${encodeURIComponent(pollId)}/vote`, {
+      body: { optionId },
+    }),
+  closePoll: (resenhaId: string, pollId: string, optionId?: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/polls/${encodeURIComponent(pollId)}/close`, {
+      body: optionId ? { optionId } : {},
+    }),
+  setDeadline: (resenhaId: string, pollId: string, closesAt: string | null) =>
+    call(
+      `/resenhas/${encodeURIComponent(resenhaId)}/polls/${encodeURIComponent(pollId)}/deadline`,
+      {
+        body: { closesAt },
+      },
+    ),
+  setSuggestions: (resenhaId: string, allow: boolean) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/suggestions`, { body: { allow } }),
   closeResenha: (resenhaId: string) =>
     call(`/resenhas/${encodeURIComponent(resenhaId)}/close`, { method: 'POST' }),
   removeMember: (groupId: string, userId: string) =>
@@ -106,6 +127,9 @@ const messages: Record<ApiErrorCode, string> = {
   phone_required: 'Para isso, entra com seu celular.',
   group_full: 'O grupo já tem 200 pessoas.',
   resenha_closed: 'Essa resenha já foi encerrada.',
+  poll_closed: 'Essa votação já fechou.',
+  blocked_text: 'Essa opção não rola. Opções são sobre a resenha, nunca sobre pessoas.',
+  tie: 'Deu empate. Escolhe qual opção vence.',
   internal: 'Deu ruim aqui. Tenta de novo daqui a pouco.',
 };
 
