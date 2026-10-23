@@ -23,12 +23,25 @@ export function containsWords(text: string, phrase: string): boolean {
   return ` ${text} `.includes(` ${phrase} `);
 }
 
-export async function isBlockedText(db: Queryable, text: string): Promise<boolean> {
+/**
+ * Termos ofensivos sempre; termos de álcool só quando há menor aprovado na
+ * resenha (sem álcool para menores; spec, seção 3).
+ */
+export async function isBlockedText(
+  db: Queryable,
+  text: string,
+  { alcohol }: { alcohol: boolean },
+): Promise<boolean> {
   const normalized = normalize(text);
   const terms = await db
     .select({ term: blockedTerms.term })
     .from(blockedTerms)
-    .where(eq(blockedTerms.active, true));
+    .where(
+      and(
+        eq(blockedTerms.active, true),
+        alcohol ? undefined : eq(blockedTerms.category, 'offensive'),
+      ),
+    );
   return terms.some(({ term }) => containsWords(normalized, normalize(term)));
 }
 

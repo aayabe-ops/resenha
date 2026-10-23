@@ -1,11 +1,44 @@
 // Regras das votações (VOT-01 a VOT-07). A fonte da verdade é o Postgres;
 // o Durable Object chama estas funções e avisa as mudanças ao vivo.
 import type { Database } from '@resenha/db/client';
-import { participations, pollOptions, polls, resenhas, users, votes } from '@resenha/db';
+import {
+  blockedTerms,
+  items,
+  participations,
+  pollOptions,
+  polls,
+  resenhas,
+  users,
+  votes,
+} from '@resenha/db';
 import type { Poll, PollKind, SplitModel } from '@resenha/shared';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { containsWords, normalize } from './text-filter';
 
-type Queryable = Pick<Database, 'select' | 'update' | 'insert'>;
+type Queryable = Pick<Database, 'select' | 'update' | 'insert' | 'delete'>;
+
+// DIV-04: a opção de casa mostra só o bairro. TODO(copy): revisar
+export const homeLabel = (neighborhood: string) => `Uma casa em ${neighborhood}`;
+
+/** Há participante aprovado menor de idade (idade calculada agora)? */
+export async function hasApprovedMinor(
+  db: Pick<Database, 'select'>,
+  resenhaId: string,
+): Promise<boolean> {
+  const [minor] = await db
+    .select({ userId: participations.userId })
+    .from(participations)
+    .innerJoin(users, eq(users.id, participations.userId))
+    .where(
+      and(
+        eq(participations.resenhaId, resenhaId),
+        eq(participations.access, 'approved'),
+        sql`age((now() at time zone 'America/Sao_Paulo')::date, ${users.birthDate}) < interval '18 years'`,
+      ),
+    )
+    .limit(1);
+  return Boolean(minor);
+}
 
 // VOT-02. TODO(copy): revisar
 export const SPLIT_LABELS: Record<SplitModel, string> = {
@@ -31,22 +64,33 @@ export async function createDefaultOptions(db: Queryable, pollId: string, kind: 
 /**
  * Sem álcool para menores (CLAUDE.md; VOT-02): se algum participante
  * aprovado for menor, "só bebida" vira "cada um com o seu", mantendo os
- * votos, e a regra já decidida também muda. Não volta atrás.
+ * votos, a regra já decidida também muda e os itens com termos de álcool
+ * são apagados. Não volta atrás.
  */
 export async function applyMinorRule(db: Queryable, resenhaId: string): Promise<void> {
-  const [minor] = await db
-    .select({ userId: participations.userId })
-    .from(participations)
-    .innerJoin(users, eq(users.id, participations.userId))
-    .where(
-      and(
-        eq(participations.resenhaId, resenhaId),
-        eq(participations.access, 'approved'),
-        sql`age((now() at time zone 'America/Sao_Paulo')::date, ${users.birthDate}) < interval '18 years'`,
-      ),
-    )
-    .limit(1);
-  if (!minor) return;
+  if (!(await hasApprovedMinor(db, resenhaId))) return;
+
+  const alcoholTerms = await db
+    .select({ term: blockedTerms.term })
+    .from(blockedTerms)
+    .where(and(eq(blockedTerms.active, true), eq(blockedTerms.category, 'alcohol')));
+  if (alcoholTerms.length > 0) {
+    const current = await db
+      .select({ id: items.id, description: items.description })
+      .from(items)
+      .where(eq(items.resenhaId, resenhaId));
+    const alcoholic = current.filter((item) =>
+      alcoholTerms.some(({ term }) => containsWords(normalize(item.description), normalize(term))),
+    );
+    if (alcoholic.length > 0) {
+      await db.delete(items).where(
+        inArray(
+          items.id,
+          alcoholic.map((item) => item.id),
+        ),
+      );
+    }
+  }
 
   await db
     .update(pollOptions)
@@ -93,6 +137,7 @@ export async function loadPolls(db: Pick<Database, 'select'>, resenhaId: string)
       pollId: pollOptions.pollId,
       label: pollOptions.label,
       splitModel: pollOptions.splitModel,
+      offeredHomeBy: pollOptions.offeredHomeBy,
       suggestedById: users.id,
       suggestedByNickname: users.nickname,
     })
@@ -120,6 +165,7 @@ export async function loadPolls(db: Pick<Database, 'select'>, resenhaId: string)
           option.suggestedById && option.suggestedByNickname
             ? { id: option.suggestedById, nickname: option.suggestedByNickname }
             : null,
+        isHome: option.offeredHomeBy !== null,
         voters: voteRows
           .filter((vote) => vote.optionId === option.id)
           .map(({ id, nickname }) => ({ id, nickname })),
@@ -150,6 +196,7 @@ export async function applyWinner(
       label: pollOptions.label,
       splitModel: pollOptions.splitModel,
       neighborhood: pollOptions.neighborhood,
+      offeredHomeBy: pollOptions.offeredHomeBy,
       kind: polls.kind,
     })
     .from(pollOptions)
@@ -177,9 +224,14 @@ export async function applyWinner(
       })
       .where(eq(resenhas.id, resenhaId));
   } else if (option.kind === 'where') {
+    // A casa vencedora define o anfitrião (DIV-04); o endereço vem dele depois
     await db
       .update(resenhas)
-      .set({ neighborhood: option.neighborhood ?? option.label, updatedAt: sql`now()` })
+      .set({
+        neighborhood: option.neighborhood ?? option.label,
+        ...(option.offeredHomeBy ? { hostId: option.offeredHomeBy } : {}),
+        updatedAt: sql`now()`,
+      })
       .where(eq(resenhas.id, resenhaId));
   }
   await markDecidedIfDone(db, resenhaId);

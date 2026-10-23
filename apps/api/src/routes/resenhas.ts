@@ -8,8 +8,12 @@ import {
   deadlineBody,
   isUnderMinAge,
   joinResenhaBody,
+  addressBody,
+  itemBody,
+  offerHomeBody,
   optionBody,
   rsvpBody,
+  totalCostBody,
   suggestionsBody,
   voteBody,
   type ResenhaSummary,
@@ -21,8 +25,8 @@ import { z } from 'zod';
 import type { AppEnv } from '../lib/context';
 import { randomInviteCode } from '../lib/crypto';
 import { apiError, clientIp, readBody } from '../lib/http';
-import { applyMinorRule, createDefaultOptions, loadPolls } from '../lib/polls';
-import { loadParticipants, loadRequests } from '../lib/resenha-state';
+import { applyMinorRule, createDefaultOptions } from '../lib/polls';
+import { liveFor, loadLive } from '../lib/resenha-state';
 import { optionalUser, requirePhone, requireUser } from '../lib/session';
 import { verifyTurnstile } from '../lib/turnstile';
 import type { ActionResult, Decision } from '../resenha-room';
@@ -145,7 +149,8 @@ resenhaRoutes.get('/groups/:id/resenhas', requireUser, requirePhone, async (c) =
 });
 
 // Página da resenha pelo link. Sem acesso aprovado: só nome, dia, bairro e
-// contagem (LOC-01, RES-05). O endereço exato nunca sai daqui (entrega 6).
+// contagem (LOC-01, RES-05). O endereço exato só vai para quem liveFor
+// permite (LOC-02).
 resenhaRoutes.get('/resenhas/code/:code', optionalUser, async (c) => {
   const code = inviteCode.safeParse(c.req.param('code'));
   if (!code.success) return apiError(c, 404, 'not_found');
@@ -156,19 +161,15 @@ resenhaRoutes.get('/resenhas/code/:code', optionalUser, async (c) => {
       groupId: resenhas.groupId,
       name: resenhas.name,
       date: resenhas.date,
-      neighborhood: resenhas.neighborhood,
-      status: resenhas.status,
       organizerId: resenhas.organizerId,
       organizerNickname: users.nickname,
-      allowSuggestions: resenhas.allowSuggestions,
-      startsAt: resenhas.startsAt,
-      splitModel: resenhas.splitModel,
     })
     .from(resenhas)
     .innerJoin(users, eq(users.id, resenhas.organizerId))
     .where(eq(resenhas.inviteCode, code.data));
   if (!resenha) return apiError(c, 404, 'not_found');
 
+  const state = await loadLive(db, resenha.id);
   const { viewer } = c.var;
   let me: ResenhaView['me'] = null;
   if (viewer) {
@@ -180,30 +181,39 @@ resenhaRoutes.get('/resenhas/code/:code', optionalUser, async (c) => {
       id: viewer.id,
       access: participation?.access ?? null,
       rsvp: participation?.rsvp ?? null,
-      isOrganizer: viewer.id === resenha.organizerId,
+      isOrganizer: viewer.id === state.organizerId,
+      isHost: viewer.id === state.hostId,
       isGroupMember: await isApprovedMember(c, resenha.groupId, viewer.id),
     };
   }
 
-  const approved = me?.access === 'approved';
-  const { participants, counts } = await loadParticipants(db, resenha.id);
-  const pollList = approved ? await loadPolls(db, resenha.id) : [];
+  const live =
+    me?.access === 'approved'
+      ? liveFor(state, me.id)
+      : {
+          status: state.status,
+          counts: state.counts,
+          neighborhood: state.neighborhood,
+          participants: [],
+          requests: [],
+          polls: [],
+          allowSuggestions: state.allowSuggestions,
+          startsAt: null,
+          splitModel: null,
+          host: null,
+          exactAddress: null,
+          items: [],
+          totalCostCents: null,
+          perPersonCents: null,
+        };
 
   return c.json({
     id: resenha.id,
     groupId: resenha.groupId,
     name: resenha.name,
     date: resenha.date,
-    neighborhood: resenha.neighborhood,
-    status: resenha.status,
     organizer: { id: resenha.organizerId, nickname: resenha.organizerNickname },
-    counts,
-    participants: approved ? participants : [],
-    requests: me?.isOrganizer ? await loadRequests(db, resenha.id) : [],
-    polls: pollList,
-    allowSuggestions: resenha.allowSuggestions,
-    startsAt: resenha.startsAt?.toISOString() ?? null,
-    splitModel: resenha.splitModel,
+    ...live,
     me,
   } satisfies ResenhaView);
 });
@@ -266,9 +276,8 @@ resenhaRoutes.get('/resenhas/:id/live', requireUser, async (c) => {
   }
   const db = await c.var.db();
   const [row] = await db
-    .select({ organizerId: resenhas.organizerId })
+    .select({ userId: participations.userId })
     .from(participations)
-    .innerJoin(resenhas, eq(resenhas.id, participations.resenhaId))
     .where(
       and(
         eq(participations.resenhaId, id.data),
@@ -281,7 +290,6 @@ resenhaRoutes.get('/resenhas/:id/live', requireUser, async (c) => {
   const headers = new Headers(c.req.raw.headers);
   headers.set('X-Resenha-User', c.var.user.id);
   headers.set('X-Resenha-Id', id.data);
-  headers.set('X-Resenha-Role', row.organizerId === c.var.user.id ? 'organizer' : 'participant');
   return room(c, id.data).fetch(new Request(c.req.raw, { headers }));
 });
 
@@ -354,4 +362,59 @@ resenhaRoutes.post('/resenhas/:id/suggestions', requireUser, async (c) => {
   if (!body) return apiError(c, 400, 'invalid_request');
   const result = await room(c, id.data).setAllowSuggestions(id.data, c.var.user.id, body.allow);
   return actionResponse(c, result);
+});
+
+// Divisão e local (DIV-01 a DIV-04, LOC-02). Tudo passa pelo Durable Object.
+resenhaRoutes.post('/resenhas/:id/home', requireUser, async (c) => {
+  const id = uuid.safeParse(c.req.param('id'));
+  if (!id.success) return apiError(c, 404, 'not_found');
+  const body = await readBody(c, offerHomeBody);
+  if (!body) return apiError(c, 400, 'invalid_request');
+  return actionResponse(
+    c,
+    await room(c, id.data).offerHome(id.data, c.var.user.id, body.neighborhood),
+  );
+});
+
+resenhaRoutes.post('/resenhas/:id/address', requireUser, async (c) => {
+  const id = uuid.safeParse(c.req.param('id'));
+  if (!id.success) return apiError(c, 404, 'not_found');
+  const body = await readBody(c, addressBody);
+  if (!body) return apiError(c, 400, 'invalid_request');
+  return actionResponse(c, await room(c, id.data).setAddress(id.data, c.var.user.id, body.address));
+});
+
+resenhaRoutes.post('/resenhas/:id/total', requireUser, async (c) => {
+  const id = uuid.safeParse(c.req.param('id'));
+  if (!id.success) return apiError(c, 404, 'not_found');
+  const body = await readBody(c, totalCostBody);
+  if (!body) return apiError(c, 400, 'invalid_request');
+  return actionResponse(
+    c,
+    await room(c, id.data).setTotalCost(id.data, c.var.user.id, body.totalCostCents),
+  );
+});
+
+resenhaRoutes.post('/resenhas/:id/items', requireUser, async (c) => {
+  const id = uuid.safeParse(c.req.param('id'));
+  if (!id.success) return apiError(c, 404, 'not_found');
+  const body = await readBody(c, itemBody);
+  if (!body) return apiError(c, 400, 'invalid_request');
+  return actionResponse(
+    c,
+    await room(c, id.data).addItem(id.data, c.var.user.id, body.description),
+  );
+});
+
+const itemActions = ['claim', 'release', 'secure', 'unsecure', 'delete'] as const;
+
+resenhaRoutes.post('/resenhas/:id/items/:itemId/:action', requireUser, async (c) => {
+  const id = uuid.safeParse(c.req.param('id'));
+  const itemId = uuid.safeParse(c.req.param('itemId'));
+  const action = itemActions.find((name) => name === c.req.param('action'));
+  if (!id.success || !itemId.success || !action) return apiError(c, 404, 'not_found');
+  return actionResponse(
+    c,
+    await room(c, id.data).updateItem(id.data, c.var.user.id, itemId.data, action),
+  );
 });
