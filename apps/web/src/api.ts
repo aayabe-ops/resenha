@@ -6,6 +6,10 @@ import type {
   InviteInfo,
   Me,
   MembershipStatus,
+  PollKind,
+  ResenhaSummary,
+  ResenhaView,
+  Rsvp,
   VerifyCodeResponse,
 } from '@resenha/shared';
 
@@ -55,6 +59,32 @@ export const api = {
     call(`/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}/approve`, {
       method: 'POST',
     }),
+  createGuest: (nickname: string, birthDate: string) =>
+    call('/guests', { body: { nickname, birthDate } }),
+  listResenhas: (groupId: string) =>
+    call<ResenhaSummary[]>(`/groups/${encodeURIComponent(groupId)}/resenhas`),
+  // TODO(turnstile): o widget entra com a hospedagem; no modo dev a API não verifica
+  createResenha: (
+    groupId: string,
+    input: { name: string | null; date: string; polls: PollKind[] },
+  ) =>
+    call<{ id: string; inviteCode: string }>(`/groups/${encodeURIComponent(groupId)}/resenhas`, {
+      body: { ...input, turnstileToken: 'dev' },
+    }),
+  getResenha: (code: string) => call<ResenhaView>(`/resenhas/code/${encodeURIComponent(code)}`),
+  joinResenha: (code: string, from: string | null) =>
+    call<{ access: string }>(`/resenhas/code/${encodeURIComponent(code)}/join`, {
+      body: from ? { from } : {},
+    }),
+  rsvp: (resenhaId: string, rsvp: Rsvp) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/rsvp`, { body: { rsvp } }),
+  decide: (resenhaId: string, userId: string, decision: 'approve' | 'reject' | 'remove') =>
+    call(
+      `/resenhas/${encodeURIComponent(resenhaId)}/participants/${encodeURIComponent(userId)}/${decision}`,
+      { method: 'POST' },
+    ),
+  closeResenha: (resenhaId: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/close`, { method: 'POST' }),
   removeMember: (groupId: string, userId: string) =>
     call(`/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}/remove`, {
       method: 'POST',
@@ -75,6 +105,7 @@ const messages: Record<ApiErrorCode, string> = {
   forbidden: 'Você não pode fazer isso.',
   phone_required: 'Para isso, entra com seu celular.',
   group_full: 'O grupo já tem 200 pessoas.',
+  resenha_closed: 'Essa resenha já foi encerrada.',
   internal: 'Deu ruim aqui. Tenta de novo daqui a pouco.',
 };
 

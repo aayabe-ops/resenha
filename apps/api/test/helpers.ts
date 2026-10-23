@@ -97,3 +97,40 @@ export async function registerUser(
   if (registered.status !== 201) throw new Error(`cadastro falhou: ${registered.status}`);
   return sessionCookie(registered);
 }
+
+let phoneCounter = 0;
+
+/** Usuário com celular, pelo fluxo completo; devolve cookie e id. */
+export async function newUser(logs: ReturnType<typeof captureConsole>, nickname: string) {
+  phoneCounter += 1;
+  const phone = `+55119${String(10_000_000 + phoneCounter).padStart(8, '0')}`;
+  const cookie = await registerUser(logs, { phone, nickname });
+  const [row] = await sql<{ id: string }>('select id from users where phone_e164 = $1', [phone]);
+  return { cookie, id: row?.id ?? '' };
+}
+
+/** Convidado sem celular (ACE-01); devolve cookie e id. */
+export async function newGuest(nickname: string, birthDate = birthDateForAge(16)) {
+  const response = await api('/guests', { body: { nickname, birthDate } });
+  const cookie = sessionCookie(response);
+  const me = await (await api('/me', { cookie })).json<{ id: string }>();
+  return { cookie, id: me.id };
+}
+
+export async function createGroup(cookie: string, name = 'Galera do 3º') {
+  const response = await api('/groups', { body: { name }, cookie });
+  return { response, group: (await response.json()) as { id: string; inviteCode: string } };
+}
+
+/** Coloca `member` no grupo, aprovado pelo admin. */
+export async function addToGroup(
+  admin: { cookie: string },
+  member: { cookie: string; id: string },
+  group: { id: string; inviteCode: string },
+) {
+  await api(`/invites/${group.inviteCode}/join`, { method: 'POST', cookie: member.cookie });
+  await api(`/groups/${group.id}/members/${member.id}/approve`, {
+    method: 'POST',
+    cookie: admin.cookie,
+  });
+}

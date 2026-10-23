@@ -2,6 +2,7 @@ import type { GroupDetail, GroupHistoryItem } from '@resenha/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { api, errorMessage } from '../api';
 import { formatDate } from '../format';
+import { GroupResenhas } from './GroupResenhas';
 import { Link } from './Link';
 
 // Página do grupo: link de convite, membros, pedidos (admin) e histórico
@@ -63,6 +64,8 @@ export function GroupPage({ id }: { id: string }) {
           {error}
         </p>
       )}
+
+      <GroupResenhas groupId={group.id} />
 
       <h3>Link de convite</h3>
       <p>Quem entrar pelo link fica esperando um admin aprovar.</p>

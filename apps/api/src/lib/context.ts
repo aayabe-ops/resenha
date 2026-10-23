@@ -18,5 +18,7 @@ export interface AppEnv {
     /** Conexão aberta sob demanda, uma por requisição (ADR 0007). */
     db: () => Promise<Database>;
     user: SessionUser;
+    /** Usuário opcional, nas rotas abertas por link (optionalUser). */
+    viewer: SessionUser | null;
   };
 }
