@@ -3,10 +3,15 @@
 // vivo. Toda checagem de permissão é feita no servidor.
 import { groupMembers, participations, polls, resenhas, users } from '@resenha/db';
 import {
+  closePollBody,
   createResenhaBody,
+  deadlineBody,
   isUnderMinAge,
   joinResenhaBody,
+  optionBody,
   rsvpBody,
+  suggestionsBody,
+  voteBody,
   type ResenhaSummary,
   type ResenhaView,
 } from '@resenha/shared';
@@ -16,6 +21,7 @@ import { z } from 'zod';
 import type { AppEnv } from '../lib/context';
 import { randomInviteCode } from '../lib/crypto';
 import { apiError, clientIp, readBody } from '../lib/http';
+import { applyMinorRule, createDefaultOptions, loadPolls } from '../lib/polls';
 import { loadParticipants, loadRequests } from '../lib/resenha-state';
 import { optionalUser, requirePhone, requireUser } from '../lib/session';
 import { verifyTurnstile } from '../lib/turnstile';
@@ -29,10 +35,24 @@ function room(c: Context<AppEnv>, resenhaId: string) {
 }
 
 function actionResponse(c: Context<AppEnv>, result: ActionResult) {
-  if (result === 'ok') return c.body(null, 204);
-  if (result === 'closed') return apiError(c, 409, 'resenha_closed');
-  if (result === 'forbidden') return apiError(c, 403, 'forbidden');
-  return apiError(c, 404, 'not_found');
+  switch (result) {
+    case 'ok':
+      return c.body(null, 204);
+    case 'closed':
+      return apiError(c, 409, 'resenha_closed');
+    case 'poll_closed':
+      return apiError(c, 409, 'poll_closed');
+    case 'tie':
+      return apiError(c, 409, 'tie');
+    case 'forbidden':
+      return apiError(c, 403, 'forbidden');
+    case 'blocked':
+      return apiError(c, 422, 'blocked_text');
+    case 'invalid':
+      return apiError(c, 400, 'invalid_request');
+    case 'not_found':
+      return apiError(c, 404, 'not_found');
+  }
 }
 
 async function isApprovedMember(c: Context<AppEnv>, groupId: string, userId: string) {
@@ -89,7 +109,13 @@ resenhaRoutes.post('/groups/:id/resenhas', requireUser, requirePhone, async (c) 
     });
     const kinds = [...new Set(body.polls)];
     if (kinds.length > 0) {
-      await tx.insert(polls).values(kinds.map((kind) => ({ resenhaId: resenha.id, kind })));
+      const created = await tx
+        .insert(polls)
+        .values(kinds.map((kind) => ({ resenhaId: resenha.id, kind })))
+        .returning({ id: polls.id, kind: polls.kind });
+      for (const poll of created) await createDefaultOptions(tx, poll.id, poll.kind);
+      // Organizador menor: "só bebida" já nasce "cada um com o seu" (VOT-02)
+      await applyMinorRule(tx, resenha.id);
     }
     return resenha;
   });
@@ -134,6 +160,9 @@ resenhaRoutes.get('/resenhas/code/:code', optionalUser, async (c) => {
       status: resenhas.status,
       organizerId: resenhas.organizerId,
       organizerNickname: users.nickname,
+      allowSuggestions: resenhas.allowSuggestions,
+      startsAt: resenhas.startsAt,
+      splitModel: resenhas.splitModel,
     })
     .from(resenhas)
     .innerJoin(users, eq(users.id, resenhas.organizerId))
@@ -158,12 +187,7 @@ resenhaRoutes.get('/resenhas/code/:code', optionalUser, async (c) => {
 
   const approved = me?.access === 'approved';
   const { participants, counts } = await loadParticipants(db, resenha.id);
-  const pollRows = approved
-    ? await db
-        .select({ kind: polls.kind, status: polls.status })
-        .from(polls)
-        .where(eq(polls.resenhaId, resenha.id))
-    : [];
+  const pollList = approved ? await loadPolls(db, resenha.id) : [];
 
   return c.json({
     id: resenha.id,
@@ -176,7 +200,10 @@ resenhaRoutes.get('/resenhas/code/:code', optionalUser, async (c) => {
     counts,
     participants: approved ? participants : [],
     requests: me?.isOrganizer ? await loadRequests(db, resenha.id) : [],
-    polls: pollRows,
+    polls: pollList,
+    allowSuggestions: resenha.allowSuggestions,
+    startsAt: resenha.startsAt?.toISOString() ?? null,
+    splitModel: resenha.splitModel,
     me,
   } satisfies ResenhaView);
 });
@@ -256,4 +283,75 @@ resenhaRoutes.get('/resenhas/:id/live', requireUser, async (c) => {
   headers.set('X-Resenha-Id', id.data);
   headers.set('X-Resenha-Role', row.organizerId === c.var.user.id ? 'organizer' : 'participant');
   return room(c, id.data).fetch(new Request(c.req.raw, { headers }));
+});
+
+// Votações (VOT-03 a VOT-05). Tudo passa pelo Durable Object da resenha.
+const pollParams = (c: Context<AppEnv>) => {
+  const id = uuid.safeParse(c.req.param('id'));
+  const pollId = uuid.safeParse(c.req.param('pollId'));
+  return id.success && pollId.success ? { id: id.data, pollId: pollId.data } : null;
+};
+
+resenhaRoutes.post('/resenhas/:id/polls/:pollId/options', requireUser, async (c) => {
+  const params = pollParams(c);
+  if (!params) return apiError(c, 404, 'not_found');
+  const body = await readBody(c, optionBody);
+  if (!body) return apiError(c, 400, 'invalid_request');
+  const result = await room(c, params.id).addOption(
+    params.id,
+    c.var.user.id,
+    params.pollId,
+    body.label,
+  );
+  return actionResponse(c, result);
+});
+
+resenhaRoutes.post('/resenhas/:id/polls/:pollId/vote', requireUser, async (c) => {
+  const params = pollParams(c);
+  if (!params) return apiError(c, 404, 'not_found');
+  const body = await readBody(c, voteBody);
+  if (!body) return apiError(c, 400, 'invalid_request');
+  const result = await room(c, params.id).vote(
+    params.id,
+    c.var.user.id,
+    params.pollId,
+    body.optionId,
+  );
+  return actionResponse(c, result);
+});
+
+resenhaRoutes.post('/resenhas/:id/polls/:pollId/close', requireUser, async (c) => {
+  const params = pollParams(c);
+  if (!params) return apiError(c, 404, 'not_found');
+  const body = (await readBody(c, closePollBody)) ?? { optionId: null };
+  const result = await room(c, params.id).closePoll(
+    params.id,
+    c.var.user.id,
+    params.pollId,
+    body.optionId ?? null,
+  );
+  return actionResponse(c, result);
+});
+
+resenhaRoutes.post('/resenhas/:id/polls/:pollId/deadline', requireUser, async (c) => {
+  const params = pollParams(c);
+  if (!params) return apiError(c, 404, 'not_found');
+  const body = await readBody(c, deadlineBody);
+  if (!body) return apiError(c, 400, 'invalid_request');
+  const result = await room(c, params.id).setDeadline(
+    params.id,
+    c.var.user.id,
+    params.pollId,
+    body.closesAt,
+  );
+  return actionResponse(c, result);
+});
+
+resenhaRoutes.post('/resenhas/:id/suggestions', requireUser, async (c) => {
+  const id = uuid.safeParse(c.req.param('id'));
+  if (!id.success) return apiError(c, 404, 'not_found');
+  const body = await readBody(c, suggestionsBody);
+  if (!body) return apiError(c, 400, 'invalid_request');
+  const result = await room(c, id.data).setAllowSuggestions(id.data, c.var.user.id, body.allow);
+  return actionResponse(c, result);
 });

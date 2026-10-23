@@ -34,6 +34,20 @@ export const rsvpBody = z.object({ rsvp: z.enum(['going', 'maybe', 'not_going'])
 
 export const joinResenhaBody = z.object({ from: z.uuid().nullish() });
 
+// Opção de votação: mesmos limites de poll_options.label (1 a 60)
+export const optionBody = z.object({ label: z.string().trim().min(1).max(60) });
+
+// Opção de horário: hora no dia da resenha (HH:MM)
+export const timeLabelSchema = z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/);
+
+export const voteBody = z.object({ optionId: z.uuid() });
+
+export const closePollBody = z.object({ optionId: z.uuid().nullish() });
+
+export const deadlineBody = z.object({ closesAt: z.iso.datetime({ offset: true }).nullable() });
+
+export const suggestionsBody = z.object({ allow: z.boolean() });
+
 export const loginCodeSchema = z.string().regex(/^[0-9]{6}$/);
 
 export const requestCodeBody = z.object({

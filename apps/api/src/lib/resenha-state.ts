@@ -9,6 +9,7 @@ import type {
   ResenhaRequest,
   ResenhaStatus,
 } from '@resenha/shared';
+import { loadPolls } from './polls';
 import { and, asc, eq, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
@@ -111,7 +112,14 @@ export async function loadLive(
   resenhaId: string,
 ): Promise<ResenhaLive & { organizerId: string }> {
   const [resenha] = await db
-    .select({ status: resenhas.status, organizerId: resenhas.organizerId })
+    .select({
+      status: resenhas.status,
+      organizerId: resenhas.organizerId,
+      allowSuggestions: resenhas.allowSuggestions,
+      neighborhood: resenhas.neighborhood,
+      startsAt: resenhas.startsAt,
+      splitModel: resenhas.splitModel,
+    })
     .from(resenhas)
     .where(eq(resenhas.id, resenhaId));
   if (!resenha) throw new Error('resenha não encontrada');
@@ -122,5 +130,10 @@ export async function loadLive(
     counts,
     participants,
     requests: await loadRequests(db, resenhaId),
+    polls: await loadPolls(db, resenhaId),
+    allowSuggestions: resenha.allowSuggestions,
+    neighborhood: resenha.neighborhood,
+    startsAt: resenha.startsAt?.toISOString() ?? null,
+    splitModel: resenha.splitModel,
   };
 }

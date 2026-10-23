@@ -106,6 +106,9 @@ const messages: Record<ApiErrorCode, string> = {
   phone_required: 'Para isso, entra com seu celular.',
   group_full: 'O grupo já tem 200 pessoas.',
   resenha_closed: 'Essa resenha já foi encerrada.',
+  poll_closed: 'Essa votação já fechou.',
+  blocked_text: 'Essa opção não rola. Opções são sobre a resenha, nunca sobre pessoas.',
+  tie: 'Deu empate. Escolhe qual opção vence.',
   internal: 'Deu ruim aqui. Tenta de novo daqui a pouco.',
 };
 
