@@ -83,6 +83,27 @@ export const api = {
       `/resenhas/${encodeURIComponent(resenhaId)}/participants/${encodeURIComponent(userId)}/${decision}`,
       { method: 'POST' },
     ),
+  suggestOption: (resenhaId: string, pollId: string, label: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/polls/${encodeURIComponent(pollId)}/options`, {
+      body: { label },
+    }),
+  vote: (resenhaId: string, pollId: string, optionId: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/polls/${encodeURIComponent(pollId)}/vote`, {
+      body: { optionId },
+    }),
+  closePoll: (resenhaId: string, pollId: string, optionId?: string) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/polls/${encodeURIComponent(pollId)}/close`, {
+      body: optionId ? { optionId } : {},
+    }),
+  setDeadline: (resenhaId: string, pollId: string, closesAt: string | null) =>
+    call(
+      `/resenhas/${encodeURIComponent(resenhaId)}/polls/${encodeURIComponent(pollId)}/deadline`,
+      {
+        body: { closesAt },
+      },
+    ),
+  setSuggestions: (resenhaId: string, allow: boolean) =>
+    call(`/resenhas/${encodeURIComponent(resenhaId)}/suggestions`, { body: { allow } }),
   closeResenha: (resenhaId: string) =>
     call(`/resenhas/${encodeURIComponent(resenhaId)}/close`, { method: 'POST' }),
   removeMember: (groupId: string, userId: string) =>
