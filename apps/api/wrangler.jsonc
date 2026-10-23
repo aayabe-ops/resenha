@@ -5,10 +5,31 @@
   "name": "resenha",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
+  // Modos de desenvolvimento (CLAUDE.md, fase local): o Turnstile não é
+  // verificado e o código de login aparece no console do Wrangler.
+  "vars": {
+    "TURNSTILE_MODE": "dev",
+    "WHATSAPP_MODE": "dev",
+  },
+  // Limpeza de códigos, sessões e pedidos por IP expirados
+  "triggers": {
+    "crons": ["*/15 * * * *"],
+  },
   // Um único Worker serve o PWA (apps/web/dist) e a API (/api/*).
   "assets": {
     "directory": "../web/dist",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"],
   },
+  // Postgres via Hyperdrive (ADR 0007). O id é fictício até a hospedagem ser
+  // decidida (ADR 0005). No local, o Wrangler conecta direto no Postgres do
+  // docker-compose.yml; a variável CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE
+  // sobrescreve (é o que o CI e os testes usam).
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000",
+      "localConnectionString": "postgres://resenha:resenha@localhost:5432/resenha",
+    },
+  ],
 }

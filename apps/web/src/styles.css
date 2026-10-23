@@ -1,0 +1,41 @@
+/* Estilo provisório: telas e tokens de design em aberto (questão #9).
+   Mínimos de acessibilidade (RNF-09): contraste AA e área de toque de 44 px. */
+:root {
+  font-family: system-ui, sans-serif;
+  color: #111;
+  background: #fff;
+}
+
+main {
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+input,
+button {
+  min-height: 44px;
+  font-size: 1rem;
+}
+
+button {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.error {
+  color: #a10000;
+}
+
+.danger {
+  border: 1px solid #a10000;
+  padding: 0.75rem;
+  margin-top: 1rem;
+}

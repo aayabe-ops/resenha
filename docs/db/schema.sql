@@ -83,6 +83,16 @@ CREATE TABLE login_codes (
 );
 CREATE INDEX login_codes_phone_idx ON login_codes (phone_e164, created_at DESC);
 
+-- Pedidos por IP, para os limites por IP do código de login (ACE-02) e da
+-- criação de convidado (ACE-01); o Cron apaga após 1 h
+CREATE TABLE login_ip_requests (
+  id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  ip_hash       text NOT NULL,                                -- PII pseudonimizada: HMAC do IP, nunca o IP em claro
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  purpose       text NOT NULL DEFAULT 'login_code' CHECK (purpose IN ('login_code', 'guest'))
+);
+CREATE INDEX login_ip_requests_ip_idx ON login_ip_requests (ip_hash, created_at DESC);
+
 CREATE TABLE sessions (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id      uuid NOT NULL REFERENCES users(id),

@@ -102,9 +102,9 @@ describe('migração do Drizzle', () => {
       readCatalog(migratedDb),
     ]);
 
-    // Sanidade: a referência tem as 17 tabelas e 13 enums de modelo-de-dados.md
+    // Sanidade: a referência tem as 18 tabelas e 13 enums de modelo-de-dados.md
     expect(new Set(reference.columns?.map((row) => (row as { table: string }).table)).size).toBe(
-      17,
+      18,
     );
     expect(reference.enums).toHaveLength(13);
 

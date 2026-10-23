@@ -59,7 +59,8 @@ flowchart LR
 | --- | --- |
 | Idade mínima de 15 anos | Data de nascimento obrigatória no primeiro acesso; menos de 15 recusa sem gravar dados pessoais. De 15 a 17, conta de menor, com consentimento do responsável conforme parecer jurídico |
 | Sem álcool para menores | Se qualquer participante aprovado for menor, "só bebida" vira "cada um com o seu" e itens com termos da categoria álcool são bloqueados |
-| Login pelo WhatsApp | Código de 6 dígitos por template de autenticação; validade de 10 min; 5 tentativas erradas bloqueiam por 15 min; limite por número e por IP |
+| Login pelo WhatsApp | Código de 6 dígitos por template de autenticação; validade de 10 min; 5 tentativas erradas bloqueiam por 15 min; até 3 códigos por número a cada 15 min e 10 por IP a cada hora (IP guardado só como hash). Sessão de 30 dias, renovada com o uso (decidido em 21/10/2026) |
+| Convidado sem login | Até 10 convidados criados por IP a cada hora (IP guardado só como hash; decidido em 22/10/2026) |
 | Moderação | O anfitrião remove e bloqueia na resenha dele e vê as denúncias dela. Toda denúncia também vai para a fila da plataforma |
 
 Nome do produto em aberto: no código, usar `resenha` como nome provisório, configurável.
@@ -129,7 +130,7 @@ Cada critério vira ao menos um teste automatizado. Os marcados (manual) são ve
 
 - **Repositório:** monorepo com pnpm workspaces: `apps/web`, `apps/api`, `packages/db`, `packages/shared`.
 - **Ambientes:** por enquanto só local (Wrangler + Postgres em container). Preview por PR, staging e produção serão definidos junto com a hospedagem (ADRs 0005 e 0006, adiados).
-- **Desenvolvimento local:** o Wrangler roda Workers e Durable Objects na máquina; no local, a conexão com o Postgres é direta (o Hyperdrive aceita uma string de conexão local para desenvolvimento). Nada do código pode depender de serviço de nuvem para rodar localmente.
+- **Desenvolvimento local:** o Wrangler roda Workers e Durable Objects na máquina; no local, a conexão com o Postgres é direta (o Hyperdrive aceita uma string de conexão local para desenvolvimento). Nada do código pode depender de serviço de nuvem para rodar localmente. Por isso, no local o Turnstile fica em modo de desenvolvimento (sem verificação; a verificação real é testada com a resposta da Cloudflare simulada) e o código de login do WhatsApp aparece no console do Wrangler, sem o celular.
 - **Segredos:** só em Wrangler secrets e GitHub Actions secrets.
 - **Branches e PRs:** um branch por entrega; PR revisado por uma pessoa; descrição lista os IDs atendidos.
 - **Testes:** cada critério de aceite vira ao menos um teste.

@@ -2,6 +2,7 @@
 // Postgres gera para docs/db/schema.sql.
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   check,
   date,
   foreignKey,
@@ -92,6 +93,24 @@ export const loginCodes = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('login_codes_phone_idx').on(t.phoneE164, t.createdAt.desc().nullsFirst())],
+);
+
+// Pedidos por IP, para os limites por IP do código de login (ACE-02) e da
+// criação de convidado (ACE-01); o Cron apaga após 1 h
+export const loginIpRequests = pgTable(
+  'login_ip_requests',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    ipHash: text('ip_hash').notNull(), // PII pseudonimizada: HMAC do IP, nunca o IP em claro
+    createdAt: createdAt(),
+    purpose: text('purpose', { enum: ['login_code', 'guest'] })
+      .notNull()
+      .default('login_code'),
+  },
+  (t) => [
+    index('login_ip_requests_ip_idx').on(t.ipHash, t.createdAt.desc().nullsFirst()),
+    check('login_ip_requests_purpose_check', sql`${t.purpose} IN ('login_code', 'guest')`),
+  ],
 );
 
 export const sessions = pgTable(

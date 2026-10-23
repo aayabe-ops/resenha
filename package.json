@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @resenha/api --filter @resenha/web dev",
     "build": "pnpm --filter @resenha/web build",
-    "start": "pnpm build && pnpm --filter @resenha/api exec wrangler dev",
+    "start": "pnpm build && pnpm --filter @resenha/api start",
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
     "db:generate": "pnpm --filter @resenha/db generate",
